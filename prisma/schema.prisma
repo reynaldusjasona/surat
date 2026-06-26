@@ -1,0 +1,199 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── ENUMS ──────────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  host
+  photographer
+  admin
+}
+
+enum EventType {
+  wedding
+  birthday
+  gathering
+  custom
+}
+
+enum RsvpStatus {
+  attending
+  not_attending
+  maybe
+  pending
+}
+
+enum UploaderRole {
+  photographer
+  guest
+}
+
+enum PassType {
+  apple
+  google
+}
+
+// ─── MODELS ─────────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email     String   @unique
+  name      String
+  role      UserRole
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  events Event[] @relation("HostEvents")
+  photos Photo[]
+
+  @@map("users")
+}
+
+model Event {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  hostId          String    @map("host_id") @db.Uuid
+  title           String
+  type            EventType
+  date            DateTime
+  location        String
+  locationUrl     String?   @map("location_url")
+  description     String?
+  coverImageUrl   String?   @map("cover_image_url")
+  slug            String    @unique
+  featuresEnabled Json      @default("{}") @map("features_enabled") @db.JsonB
+  guestCapacity   Int?      @map("guest_capacity")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  host          User           @relation("HostEvents", fields: [hostId], references: [id], onDelete: Cascade)
+  guests        Guest[]
+  angpao        Angpao[]
+  registryItems RegistryItem[]
+  photos        Photo[]
+  photoUnlocks  PhotoUnlock[]
+  walletPasses  WalletPass[]
+
+  @@index([hostId])
+  @@index([slug])
+  @@map("events")
+}
+
+model Guest {
+  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventId      String     @map("event_id") @db.Uuid
+  name         String
+  email        String
+  rsvpStatus   RsvpStatus @default(pending) @map("rsvp_status")
+  plusOnes     Json?      @db.JsonB @map("plus_ones")
+  dietaryNotes String?    @map("dietary_notes")
+  rsvpAt       DateTime?  @map("rsvp_at")
+
+  // Relations
+  event        Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  walletPasses WalletPass[]
+
+  @@unique([eventId, email])
+  @@index([eventId])
+  @@map("guests")
+}
+
+model Angpao {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventId     String   @map("event_id") @db.Uuid
+  senderName  String   @map("sender_name")
+  senderEmail String   @map("sender_email")
+  amount      Decimal  @db.Decimal(12, 2)
+  currency    String   @default("SGD") @db.VarChar(3)
+  message     String?
+  isAnonymous Boolean  @default(false) @map("is_anonymous")
+  isThanked   Boolean  @default(false) @map("is_thanked")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@map("angpao")
+}
+
+model RegistryItem {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventId             String   @map("event_id") @db.Uuid
+  name                String
+  brand               String?
+  price               Decimal  @db.Decimal(12, 2)
+  url                 String?
+  imageUrl            String?  @map("image_url")
+  priority            Int      @default(0)
+  purchasedByName     String?  @map("purchased_by_name")
+  purchasedByEmail    String?  @map("purchased_by_email")
+  isAnonymousPurchase Boolean  @default(false) @map("is_anonymous_purchase")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  // Relations
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@map("registry_items")
+}
+
+model Photo {
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventId      String       @map("event_id") @db.Uuid
+  uploaderId   String       @map("uploader_id") @db.Uuid
+  uploaderRole UploaderRole @map("uploader_role")
+  fileUrl      String       @map("file_url")
+  thumbnailUrl String?      @map("thumbnail_url")
+  fileSize     Int?         @map("file_size")
+  resolution   String?
+  createdAt    DateTime     @default(now()) @map("created_at")
+
+  // Relations
+  event    Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  uploader User  @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@index([uploaderId])
+  @@map("photos")
+}
+
+model PhotoUnlock {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventId    String   @map("event_id") @db.Uuid
+  guestEmail String   @map("guest_email")
+  paidAt     DateTime @map("paid_at")
+  amount     Decimal  @db.Decimal(12, 2)
+  currency   String   @default("SGD") @db.VarChar(3)
+
+  // Relations
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, guestEmail])
+  @@index([eventId])
+  @@map("photo_unlocks")
+}
+
+model WalletPass {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventId   String   @map("event_id") @db.Uuid
+  guestId   String   @map("guest_id") @db.Uuid
+  passType  PassType @map("pass_type")
+  passData  Json     @map("pass_data") @db.JsonB
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  guest Guest @relation(fields: [guestId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, guestId, passType])
+  @@index([eventId])
+  @@index([guestId])
+  @@map("wallet_passes")
+}
