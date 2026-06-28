@@ -6,6 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle, Button } from "@/components/u
 import { StatusCards } from "@/components/dashboard/status-cards";
 import { GuestTable } from "@/components/dashboard/guest-table";
 import { ExportCsvButton } from "@/components/dashboard/export-csv-button";
+import { DashboardTabs } from "@/components/dashboard/dashboard-tabs";
+import { AngpaoTab } from "@/components/dashboard/angpao-tab";
+import { RegistryTab } from "@/components/dashboard/registry-tab";
 
 interface Guest {
   id: string;
@@ -42,17 +45,16 @@ export default function DashboardPage() {
   const [counts, setCounts] = useState<Counts>({ attending: 0, not_attending: 0, maybe: 0, pending: 0, total: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [activeTab, setActiveTab] = useState("guests");
 
   useEffect(() => {
     async function fetchData() {
       try {
-        // Fetch event details
         const eventRes = await fetch(`/api/events/${slug}`);
         if (!eventRes.ok) throw new Error("Event not found");
         const eventData = await eventRes.json();
         setEvent(eventData);
 
-        // Fetch RSVPs
         const rsvpRes = await fetch(`/api/events/${slug}/rsvp`);
         if (rsvpRes.status === 401) {
           setError("Please log in to view this dashboard.");
@@ -136,19 +138,28 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Stats */}
-        <StatusCards counts={counts} />
+        {/* Tabs */}
+        <DashboardTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-        {/* Guest List */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Guest List ({counts.total})</CardTitle>
-            <ExportCsvButton guests={guests} eventTitle={event.title} />
-          </CardHeader>
-          <CardContent>
-            <GuestTable guests={guests} />
-          </CardContent>
-        </Card>
+        {/* Tab Content */}
+        {activeTab === "guests" && (
+          <div className="space-y-6">
+            <StatusCards counts={counts} />
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Guest List ({counts.total})</CardTitle>
+                <ExportCsvButton guests={guests} eventTitle={event.title} />
+              </CardHeader>
+              <CardContent>
+                <GuestTable guests={guests} />
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {activeTab === "angpao" && <AngpaoTab slug={slug} />}
+
+        {activeTab === "registry" && <RegistryTab slug={slug} />}
       </div>
     </main>
   );

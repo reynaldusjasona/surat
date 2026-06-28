@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
 import { RsvpForm } from "@/components/events/rsvp-form";
+import { AngpaoSection } from "@/components/events/angpao-section";
+import { RegistrySection } from "@/components/events/registry-section";
 
 interface EventData {
   id: string;
@@ -239,23 +241,11 @@ export default function EventPage() {
 
         {/* Feature Sections */}
         {event.featuresEnabled?.angpao && (
-          <Card>
-            <CardContent className="p-6 text-center">
-              <span className="text-3xl">🧧</span>
-              <h3 className="font-semibold mt-2">Digital Angpao</h3>
-              <p className="text-sm text-gray-500 mt-1">Send a digital red packet to the couple</p>
-            </CardContent>
-          </Card>
+          <AngpaoSection slug={slug} eventType={event.type} />
         )}
 
         {event.featuresEnabled?.registry && (
-          <Card>
-            <CardContent className="p-6 text-center">
-              <span className="text-3xl">🎁</span>
-              <h3 className="font-semibold mt-2">Gift Registry</h3>
-              <p className="text-sm text-gray-500 mt-1">View the couple&apos;s wishlist</p>
-            </CardContent>
-          </Card>
+          <RegistrySection slug={slug} />
         )}
 
         {event.featuresEnabled?.photos && (

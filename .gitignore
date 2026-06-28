@@ -39,3 +39,6 @@ prisma/generated/
 
 #kiro
 .kiro
+
+#claude
+.claude
