@@ -11,6 +11,7 @@ const tabs = [
   { id: "guests", label: "Guests", emoji: "👥" },
   { id: "angpao", label: "Angpao", emoji: "🧧" },
   { id: "registry", label: "Registry", emoji: "🎁" },
+  { id: "photos", label: "Photos", emoji: "📸" },
 ];
 
 export function DashboardTabs({ activeTab, onTabChange }: DashboardTabsProps) {

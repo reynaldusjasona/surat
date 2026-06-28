@@ -9,6 +9,7 @@ import { ExportCsvButton } from "@/components/dashboard/export-csv-button";
 import { DashboardTabs } from "@/components/dashboard/dashboard-tabs";
 import { AngpaoTab } from "@/components/dashboard/angpao-tab";
 import { RegistryTab } from "@/components/dashboard/registry-tab";
+import { PhotosTab } from "@/components/dashboard/photos-tab";
 
 interface Guest {
   id: string;
@@ -160,6 +161,8 @@ export default function DashboardPage() {
         {activeTab === "angpao" && <AngpaoTab slug={slug} />}
 
         {activeTab === "registry" && <RegistryTab slug={slug} />}
+
+        {activeTab === "photos" && <PhotosTab slug={slug} />}
       </div>
     </main>
   );

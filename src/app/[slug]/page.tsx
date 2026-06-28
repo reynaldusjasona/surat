@@ -6,6 +6,7 @@ import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/compo
 import { RsvpForm } from "@/components/events/rsvp-form";
 import { AngpaoSection } from "@/components/events/angpao-section";
 import { RegistrySection } from "@/components/events/registry-section";
+import { PhotoGallerySection } from "@/components/events/photo-gallery-section";
 
 interface EventData {
   id: string;
@@ -249,13 +250,7 @@ export default function EventPage() {
         )}
 
         {event.featuresEnabled?.photos && (
-          <Card>
-            <CardContent className="p-6 text-center">
-              <span className="text-3xl">📸</span>
-              <h3 className="font-semibold mt-2">Photo Sharing</h3>
-              <p className="text-sm text-gray-500 mt-1">Share and view event photos</p>
-            </CardContent>
-          </Card>
+          <PhotoGallerySection slug={slug} />
         )}
       </div>
     </main>
