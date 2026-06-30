@@ -17,10 +17,10 @@ export async function GET(
 
     const icsContent = generateIcs({
       title: event.title,
-      description: event.description,
-      location: event.location,
+      description: event.description ?? undefined,
+      location: event.location ?? undefined,
       startDate: event.date,
-      url: event.locationUrl,
+      url: event.mapsUrl ?? undefined,
     });
 
     return new NextResponse(icsContent, {

@@ -1,57 +1,99 @@
 # Surat — Product Requirements Document (PRD)
 
-**Version:** 2.0
+**Version:** 3.0
 **Last Updated:** June 2026
 **Status:** Active
+**Platform:** Web application (mobile-responsive microsite)
 
 ---
 
 ## 1. Product Vision
 
-Surat replaces five separate event tools with one shareable link. No app download. Built for Southeast Asian events where digital angpao, photo sharing, and wallet passes are cultural essentials — not afterthoughts.
+Surat replaces five separate event tools with one shareable link. No app download. Built as a **mobile-responsive web application (microsite)** using Next.js and Tailwind CSS, optimized for Southeast Asian events where digital angpao, photo sharing, and wallet passes are cultural essentials.
 
 **One link. Every event need. Zero friction for guests.**
 
 ---
 
-## 2. Problem Statement
+## 2. Platform Definition
+
+### What Surat IS:
+- A **web application** (not a native mobile app)
+- A **microsite generator** — each event gets its own shareable URL that works as a self-contained mini-website
+- **Mobile-responsive** — designed mobile-first with Tailwind CSS, works perfectly on any phone browser
+- Deployed on **Vercel** as a single Next.js application
+- The event page (`surat.app/[slug]`) is the core product — a complete microsite guests interact with
+
+### What Surat is NOT:
+- Not a native iOS/Android app (no App Store download)
+- Not a desktop-first application
+- Not a page builder (events follow a consistent, polished template)
+
+### Technical Platform:
+| Layer | Technology |
+|-------|-----------|
+| Framework | Next.js 14 (App Router, TypeScript) |
+| Styling | Tailwind CSS 3 (custom design system, mobile-first) |
+| UI | Custom components (card, badge, button, input) — styled with Surat brand |
+| Database | PostgreSQL via Supabase |
+| ORM | Prisma |
+| Auth | Supabase Auth (email/password) |
+| File Storage | Supabase Storage (photos, covers) |
+| Image Processing | Sharp (server-side thumbnails) |
+| Validation | Zod (all inputs, always) |
+| Deploy | Vercel (edge network, auto-scaling) |
+| Domain | surat.app (or custom domain per organizer) |
+
+### Design System:
+- **Brand colors:** Surat Red (#DC2626), Beige (#FAF7F2), Off-white (#FAFAF8)
+- **Typography:** Playfair Display (serif, headings), Inter (sans, body)
+- **Components:** Cards with subtle shadows, badges, rounded inputs, warm neutral palette
+- **Mobile-first:** Every component starts at 375px viewport, scales up
+- **Touch-friendly:** Minimum 44px tap targets, large CTAs
+- **No horizontal scroll** on any page at any breakpoint
+
+---
+
+## 3. Problem Statement
 
 Planning an event in Southeast Asia requires juggling:
 - Google Forms for RSVP
 - WhatsApp groups for coordination
 - Bank transfers for angpao (no tracking)
-- Separate photo sharing apps (Google Photos, Momento)
+- Separate photo sharing apps
 - Canva for digital invitations
-- No easy way to share event to phone wallet
+- No easy way to save event to phone wallet
 
-Each tool is disconnected. Hosts lose track. Guests get confused by multiple links. Nobody has a single view of everything.
+Each tool is disconnected. Hosts lose track. Guests get confused by multiple links.
 
-**Surat solves this by putting everything behind one link that works instantly on any phone.**
+**Surat solves this with a single shareable URL that works instantly on any phone browser — no download, no signup for guests.**
 
 ---
 
-## 3. Target Market
+## 4. Target Market
 
 - **Primary:** Singapore & Indonesia
 - **Event types:** Weddings (primary), birthdays, corporate gatherings, family events
 - **Demographics:** 25-45 year olds planning life events
 - **Scale:** 50-1,000 guests per event
 - **Currency:** SGD (Singapore), IDR (Indonesia)
+- **Device:** 80% mobile (guests receive link via WhatsApp), 20% desktop (hosts manage dashboard)
 
 ---
 
-## 4. Actors
+## 5. Actors
 
-### 4.1 Guest (Unauthenticated)
-The person who receives the event link. No account needed.
+### 5.1 Guest (Unauthenticated)
+The person who receives the event link. No account needed. Interacts entirely via the event microsite.
 
 **Can do:**
-- View event page
+- View event microsite (`/[slug]`)
 - Submit RSVP (name, email, status, plus-ones, dietary notes)
-- Send digital angpao (with optional anonymity)
-- Browse and purchase registry items
+- Send digital angpao (amount, currency, message, anonymous toggle)
+- Browse and claim registry items
 - View photo gallery thumbnails
 - Download photos (20 free, then paid unlock)
+- Upload photos (`/[slug]/upload`)
 - Add event to Apple/Google Wallet or calendar
 
 **Cannot do:**
@@ -61,497 +103,440 @@ The person who receives the event link. No account needed.
 
 ---
 
-### 4.2 Host (Authenticated)
-The person whose event it is. Pays per event.
+### 5.2 Host (Authenticated)
+The person whose event it is. Signs up, pays per event, manages via dashboard.
+
+**Dashboard:** `/host` (role-based, behind auth)
 
 **Can do:**
-- Sign up with email/password or Google
-- Create an event (one-time payment per event)
-- Customize event page (cover image, description, feature toggles)
-- View RSVP dashboard (counts, guest list, CSV export)
+- Sign up / login (email + password)
+- Create event (one-time payment per event)
+- Customize event microsite (cover, description, feature toggles)
+- View & manage RSVP list (counts, table, CSV export)
 - View angpao received (total, list, mark as thanked)
 - Manage gift registry (add/remove items)
 - View photo stats (uploads, unlocks, revenue)
-- Generate photographer upload link
-- Share event link
+- Generate & share photographer upload link
+- Copy & share event link
 
-**Cannot do:**
-- Manage multiple events simultaneously on Free plan
-- Access other hosts' events
-- Manage platform settings
+**Dashboard sections:**
+- My Events (list of all events, upcoming/past)
+- Event Detail → tabs: Guests | Angpao | Registry | Photos
 
 ---
 
-### 4.3 Event Organizer (Authenticated, Subscription)
-Professional who runs events as a business. Wedding planners, corporate event managers.
+### 5.3 Event Organizer (Authenticated, Subscription)
+Professional who manages events as a business (wedding planner, corporate event manager).
+
+**Dashboard:** `/organizer` (role-based, behind auth)
 
 **Can do:**
 - Everything a Host can do
 - Create unlimited events for different clients
 - Manage all client events from one dashboard
 - Invite team members (up to 5)
-- Invite photographers with revenue share setup
-- View cross-event analytics (total revenue, guest trends)
-- White-label: custom domain, hide Surat branding, custom logo
+- Assign photographers to events with revenue share
+- View cross-event analytics (total guests, revenue, trends)
+- White-label: hide Surat branding, use custom logo
 - Transfer event ownership to client (Host)
-
-**Business model:** Monthly subscription because they create events every month.
 
 ---
 
-### 4.4 Photographer (Invited, Optional Account)
-Invited by Host or Organizer to upload event photos.
+### 5.4 Photographer (Invited or Authenticated)
+Uploads event photos. Can be invited (link only) or have own account.
+
+**Dashboard:** `/photographer` (role-based, behind auth — optional)
 
 **Can do:**
 - Upload photos in bulk via special link (no account required)
-- Create account to track earnings across multiple events
+- (If account) Track earnings across multiple events
 - View download stats per event
-- View earnings from photo unlock revenue share (60%)
-- Request payout
-
-**Cannot do:**
-- Create events
-- Access guest list or angpao data
-- Modify event settings
+- View revenue share from photo unlock fees (60%)
 
 ---
 
-### 4.5 Platform Admin (Internal)
+### 5.5 Platform Admin (Internal)
 Surat team member managing the platform.
+
+**Dashboard:** `/admin` (role-based, behind auth)
 
 **Can do:**
 - View all users, events, transactions
-- Manage subscriptions and billing
-- Moderate content (flag/remove inappropriate photos)
-- Handle support tickets
+- Moderate content (flag/remove photos, events)
+- Handle support cases
 - View platform-wide analytics
-- Manage pricing and plan configurations
+- Manage pricing/plan configurations
 - Issue refunds
 
 ---
 
-## 5. Pricing Model
+## 6. Pricing Model
 
-### 5.1 Per-Event Pricing (Hosts)
+### 6.1 Per-Event Pricing (Hosts)
 
 | Plan | Price | Guests | Photos | Registry | Angpao Fee | Duration |
 |------|-------|--------|--------|----------|-----------|----------|
-| **Free** | SGD 0 | 50 max | 50 max | 10 items | 3% | 30 days active |
+| **Free** | SGD 0 | 50 max | 50 max | 10 items | 3% | 30 days after event |
 | **Standard** | SGD 19 (one-time) | 300 | 500 | Unlimited | 2% | 12 months |
 | **Premium** | SGD 49 (one-time) | 1,000 | 2,000 | Unlimited | 1% | 12 months |
 
-**Notes:**
-- One-time payment per event. No recurring charge.
-- "Duration" = how long the event page stays accessible after event date.
-- After duration expires, host can download all data (CSV, photos) but page goes offline.
-- Host can upgrade from Free → Standard mid-event (pays difference).
+**Key points:**
+- One-time payment per event. NOT a subscription.
+- "Duration" = how long data stays accessible after event date.
+- After expiry: host can export data, page goes offline.
+- Can upgrade mid-event (pay difference).
 
-### 5.2 Organizer Subscription
+### 6.2 Organizer Subscription (Monthly)
 
 | Plan | Price | Events | Team | Extra |
 |------|-------|--------|------|-------|
 | **Organizer** | SGD 79/month or SGD 699/year | Unlimited | 5 members | White-label, analytics, API |
 
-### 5.3 Transaction-Based Revenue
+This is the ONLY recurring subscription — for professionals who create events every month.
 
-| Revenue Stream | How It Works | Amount |
-|---------------|--------------|--------|
-| **Angpao commission** | % deducted from every angpao sent | 1-3% (plan-dependent) |
+### 6.3 Transaction Revenue
+
+| Stream | How It Works | Amount |
+|--------|--------------|--------|
+| **Angpao commission** | % deducted from every angpao | 1-3% (by plan) |
 | **Photo unlock** | Guest pays to download all photos | SGD 5.99 / IDR 49,000 |
-| **Photographer revenue share** | Platform keeps 40%, photographer gets 60% | Per unlock |
+| **Photographer share** | Platform keeps 40%, photographer 60% | Per unlock |
 
-### 5.4 Revenue Projection (per wedding, 300 guests)
-
+### 6.4 Revenue per Wedding (300 guests)
 ```
-Event fee (Standard plan):                SGD 19
-Angpao (200 guests × SGD 150 avg × 2%):  SGD 600
-Photo unlocks (40 guests × SGD 5.99):    SGD 239.60
-                                          ─────────
-Platform revenue per wedding:             SGD 858.60
-Photographer payout (60% of photos):     -SGD 143.76
-                                          ─────────
-Net revenue per wedding:                  SGD 714.84
+Event fee (Standard):                      SGD   19
+Angpao (200 guests × SGD 150 avg × 2%):   SGD  600
+Photo unlocks (40 guests × SGD 5.99):     SGD  240
+                                           ─────────
+Gross revenue:                             SGD  859
+Photographer payout (60% of photos):      -SGD  144
+                                           ─────────
+Net revenue per wedding:                   SGD  715
 ```
 
 ---
 
-## 6. Feature Specifications
+## 7. Feature Specifications
 
-### 6.1 Event Creation & Management
+### 7.1 Event Microsite (`/[slug]`)
 
-**Create Event Flow:**
-1. Host signs up / logs in
-2. Selects plan (Free / Standard / Premium) — payment for paid plans
-3. Fills event details:
-   - Title
-   - Type (wedding / birthday / gathering / corporate / custom)
-   - Date & time
-   - Location + Google Maps link
-   - Description
-   - Cover image (upload to Supabase Storage)
-   - Guest capacity
-4. Toggles features on/off:
-   - ☑ RSVP
-   - ☑ Digital Angpao
-   - ☑ Gift Registry
-   - ☑ Photo Gallery
-   - ☑ Wallet Pass
-5. Gets shareable link: `surat.app/[slug]`
+The core product. A single-page microsite generated per event. Mobile-first, loads fast, works without JavaScript for initial render (SSR).
 
-**Event Page (Public):**
-- Hero section: cover image + title + type badge
-- Event details: date, time, location (clickable map), description
-- RSVP form
-- Angpao section (if enabled)
-- Registry section (if enabled)
-- Photo gallery (if enabled)
-- Add to Calendar / Wallet buttons
+**Layout (top to bottom):**
+1. **Hero** — Full-width cover image with title overlay, type badge, host name
+2. **Details card** — Date, time, location (clickable maps link), description
+3. **RSVP section** — Form: name, email, status selector, plus-ones, dietary notes
+4. **Post-RSVP actions** — Add to Calendar, Add to Wallet buttons (shown after RSVP)
+5. **Angpao section** (if enabled) — Amount, currency, sender info, anonymous toggle, message
+6. **Registry section** (if enabled) — Item grid, "I'll get this" buttons, activity feed
+7. **Photo gallery** (if enabled) — Thumbnail grid, download counter, paywall, upload button
+
+**Responsive breakpoints:**
+- 375px (mobile, primary)
+- 640px (large phone / small tablet)
+- 1024px (desktop, max-width container)
 
 ---
 
-### 6.2 RSVP System
+### 7.2 Upload Page (`/[slug]/upload`)
 
-**Guest submits:**
-- Full name
-- Email
-- Status: Attending / Maybe / Not Attending
-- Plus-ones (add names dynamically)
-- Dietary notes (allergies, vegetarian, halal, etc.)
+Dedicated mobile-optimized page for photo uploads. Designed specifically for the "at the event, phone in hand" use case.
 
-**Host sees:**
-- Count cards: attending, maybe, not attending, pending
-- Full guest list table (sortable, searchable)
-- CSV export
-- Email notification when new RSVP arrives (Pro+)
+**Flow:**
+1. Identify: name + email form
+2. Select: tap to open camera roll (multi-select)
+3. Preview: grid of selected photos
+4. Upload: progress bar, count
+5. Done: success message, "Upload more" or "Done" buttons
 
-**Rules:**
-- Same email = update existing RSVP (upsert)
-- Guest capacity enforced: once full, show "Event Full" message
-- No auth required for guests
+**Tech:** multipart/form-data, max 10MB/file, max 20/batch, sharp for thumbnails.
 
 ---
 
-### 6.3 Digital Angpao
+### 7.3 Host Dashboard (`/host`)
 
-**Guest sends:**
-- Amount (any positive number)
-- Currency (SGD or IDR)
-- Message (optional, max 500 chars)
-- Anonymous toggle
-- Sender name + email
+Role-gated area for event management. Responsive but optimized for both mobile and desktop.
 
-**System:**
-- Payment simulated (MVP) → real Stripe later
-- Platform deducts commission (1-3% based on plan)
-- Records transaction in database
+**Pages:**
+- `/host` — Event list (upcoming/past, create button)
+- `/host/events/new` — Create event form
+- `/host/events/[slug]` — Event detail with tabs: Guests | Angpao | Registry | Photos
 
-**Host sees:**
-- Total amount received
-- List of angpao: amount, message, date
-- Anonymous angpao: sees amount + message only (NEVER sees sender identity)
-- "Thank" toggle per angpao
-
-**Suggested amounts (helper text, not enforced):**
-- Wedding: SGD 100-200 / IDR 500,000-1,000,000
-- Birthday: no suggestion
-- Corporate: SGD 50-100
+**Components:**
+- Sidebar (desktop) / bottom nav or hamburger (mobile)
+- Topbar with user info
+- Stats cards, data tables, forms
 
 ---
 
-### 6.4 Gift Registry
+### 7.4 Auth Flow
 
-**Host adds items:**
-- Item name
-- Brand
-- Price
-- External product link (Shopee, Lazada, etc.)
-- Image URL
-- Priority (1-10)
+**Pages:**
+- `/login` — Email + password, link to signup
+- `/signup` — Email, password, full name, role selection
 
-**Guest sees:**
-- Grid of items with image, name, brand, price
-- Status badge: "Available" (green) / "Taken by Sarah" / "Taken" (anonymous)
-- "I'll get this" button → form: name, email, anonymous toggle
-- Activity feed: "Sarah is getting Dyson V15"
+**After signup:**
+- Profile created in `profiles` table
+- Redirected to role-appropriate dashboard (`/host`, `/organizer`, `/photographer`, `/admin`)
 
-**Rules:**
-- Item can only be purchased once (409 if taken)
-- Guest buys it themselves externally — Surat just tracks who's getting what
-- Anonymous purchase: host sees "Taken" but not by whom
+**Session:**
+- Supabase Auth with `@supabase/ssr` (cookie-based sessions)
+- Middleware refreshes session on every request
+- Unauthenticated access to `/[slug]` (event page) always allowed
 
 ---
 
-### 6.5 Photo Gallery (Freemium)
+## 8. Page Map (All Routes)
 
-**Upload:**
-- Mobile-optimized upload page: `/[slug]/upload`
-- Identify by name + email (no account)
-- Select multiple photos, progress bar, success confirmation
-- Max 10MB per photo, max 20 per batch
-- Auto-generates 400px thumbnail via `sharp`
-- Photographer gets special link with `?role=photographer` tag
+### Public (no auth):
+```
+/                          → Landing page
+/login                     → Login form
+/signup                    → Signup form
+/[slug]                    → Event microsite (core product)
+/[slug]/upload             → Photo upload page (mobile-optimized)
+```
 
-**Gallery:**
-- Uniform grid of thumbnails (public, no auth)
-- Badge per photo: 📷 (photographer) or 👤 (guest)
-- Lazy loading
+### Authenticated (role-based):
+```
+/host                      → Host event list
+/host/events/new           → Create event form
+/host/events/[slug]        → Event management (tabs)
 
-**Downloads (Freemium):**
-- First 20 downloads: FREE (tracked in localStorage)
-- Counter shown: "5 of 20 free downloads used"
-- After 20: paywall modal appears
-- Unlock price: SGD 5.99 / IDR 49,000
-- After payment: unlimited downloads + ZIP download button
+/organizer                 → Organizer dashboard (multi-event)
+/photographer              → Photographer earnings & stats
+/admin                     → Platform admin panel
+```
 
-**Revenue split:**
-- Platform: 40%
-- Photographer: 60%
-- No photographer assigned: Platform gets 100%
+### API:
+```
+POST   /api/auth/signup               → Create account + profile
+POST   /api/auth/login                → (handled by Supabase client)
+POST   /api/auth/logout               → Sign out
 
-**Technical:**
-- Full-resolution URLs are signed (1-hour expiry), generated at request time
-- Thumbnails are always public (CDN-served)
-- ZIP generated client-side using JSZip
+POST   /api/events                    → Create event
+GET    /api/events/[slug]             → Get event (public)
+PATCH  /api/events/[slug]             → Update event (host only)
 
----
+POST   /api/events/[slug]/rsvp        → Submit RSVP
+GET    /api/events/[slug]/rsvp        → Get RSVPs (host only)
 
-### 6.6 Wallet & Calendar Integration
+GET    /api/events/[slug]/calendar    → Download .ics
 
-**Calendar (.ics):**
-- Download button on event page
-- Valid .ics file: event name, date/time, location, description
-- Works with Apple Calendar, Google Calendar, Outlook
+POST   /api/events/[slug]/angpao      → Send angpao
+GET    /api/events/[slug]/angpao      → Get angpao list (host only)
+PATCH  /api/events/[slug]/angpao/[id]/thank → Mark thanked
 
-**Apple Wallet:**
-- Generated via `passkit-generator`
-- Pass fields: event name, date, time, location, QR code (guest ID)
-- Requires Apple Developer certificates (Pro+ plans only)
-- Fallback: if generation fails, show calendar download instead
+POST   /api/events/[slug]/registry           → Add item (host)
+GET    /api/events/[slug]/registry           → List items (public)
+POST   /api/events/[slug]/registry/[id]/claim → Claim item (guest)
+DELETE /api/events/[slug]/registry/[id]       → Delete item (host)
 
-**Google Wallet:**
-- JWT-signed pass object via Google Wallet API
-- Save URL redirects to Google Wallet app
-- Test mode for MVP
-- Fallback: calendar download
+POST   /api/events/[slug]/photos/upload      → Upload photos
+GET    /api/events/[slug]/photos             → Get thumbnails
+POST   /api/events/[slug]/photos/unlock      → Pay for full access
+GET    /api/events/[slug]/photos/download    → Get signed URLs
+POST   /api/events/[slug]/photos/upload-link → Get photographer link
 
----
-
-### 6.7 Host Dashboard
-
-**Tabs:**
-1. **Guests** — RSVP counts, guest table, CSV export
-2. **Angpao** — total received, list with thank toggle
-3. **Registry** — add/manage items, view purchase status
-4. **Photos** — upload stats, photographer link, unlock revenue
-
-**Actions:**
-- Copy event link
-- View event page (preview)
-- Export guest list CSV
-- Generate photographer upload link
+POST   /api/events/[slug]/wallet      → Generate wallet pass
+```
 
 ---
 
-### 6.8 Organizer Dashboard (Future Phase)
+## 9. Non-Functional Requirements
 
-- All client events in one view
-- Create events on behalf of clients
-- Assign photographers
-- Cross-event analytics (total guests, total revenue)
-- Team member management
-- White-label settings
+### Performance
+- First Contentful Paint: < 1.5s on 4G
+- Event microsite fully interactive: < 3s on 3G
+- API response: < 500ms
+- Images: lazy loaded, WebP where supported, CDN-cached
 
----
+### Mobile-First Design Rules
+- All layouts start at 375px width
+- No horizontal scroll on any page
+- Touch targets: minimum 44×44px
+- Form inputs: minimum 16px font size (prevents iOS zoom)
+- Buttons: full-width on mobile, inline on desktop
+- Tables: horizontal scroll wrapper or card layout on mobile
+- Images: responsive with aspect-ratio preservation
 
-### 6.9 Admin Panel (Future Phase)
-
-- User management (search, ban, delete)
-- Event moderation (flag/remove)
-- Transaction history
-- Platform analytics (events created, revenue, growth)
-- Plan/pricing configuration
-- Support ticket queue
-
----
-
-## 7. Non-Functional Requirements
-
-### 7.1 Performance
-- Page load: < 2 seconds on 4G mobile
-- API response: < 500ms (excluding simulated payment delays)
-- Image thumbnails: lazy loaded, CDN-cached
-- Support 1,000 concurrent guests viewing same event page
-
-### 7.2 Security
-- Auth via Supabase (JWT sessions, httpOnly cookies)
-- All inputs validated with Zod (server-side)
-- File uploads: type-checked (image/* only), size-limited (10MB)
-- Signed URLs: 1-hour expiry, generated fresh per request
-- Anonymous data: never exposed in API responses
+### Security
+- Auth: Supabase JWT sessions (httpOnly cookies)
+- Validation: Zod on every input (server-side)
+- File uploads: image/* only, ≤10MB, validated server-side
+- Signed URLs: 1-hour expiry, generated per request
+- Anonymous angpao: sender identity NEVER in API response
 - Rate limiting: 10 req/min on public POST endpoints
-- HTTPS only
+- HTTPS only (enforced by Vercel)
 
-### 7.3 Privacy & Compliance
-- PDPA (Singapore) compliant
-- Guest data only stored in event context
-- "Delete my data" option for hosts (removes all event data)
-- No tracking cookies — localStorage only for download counter
-- Anonymous angpao sender identity never exposed (even to host)
-
-### 7.4 Availability
-- Target: 99.9% uptime
-- Deploy on Vercel (auto-scaling, edge network)
-- Database on Supabase (managed PostgreSQL, daily backups)
-- Storage on Supabase Storage (CDN-backed)
-
-### 7.5 Mobile-First
-- All pages responsive from 375px width
-- Upload page optimized for phone camera roll
-- Touch-friendly buttons (min 44px tap target)
-- No hover-only interactions
+### Privacy (PDPA Singapore)
+- Guest data stored only in event context
+- "Delete my data" option for hosts
+- No tracking cookies
+- localStorage only for download counter (no PII)
 
 ---
 
-## 8. User Flows
+## 10. Design System Details
 
-### 8.1 Host: Create Event & Share
+### Color Palette
 ```
-Sign up → Choose plan → Pay (if Standard/Premium)
-→ Fill event form → Toggle features → Submit
-→ Get link: surat.app/jason-sarah-wedding-k3f8
-→ Share via WhatsApp / email / QR code at venue
-→ Monitor dashboard throughout event
-→ After event: download CSV, download photos, view total angpao
-```
-
-### 8.2 Guest: Full Journey
-```
-Receive link → Open on phone → See event page
-→ RSVP (name, email, attending, +1, dietary)
-→ Add to Wallet / Calendar
-→ Browse registry → "I'll get this" for Dyson V15
-→ Send SGD 150 angpao with message "Congrats!"
-→ At event: open surat.app/[slug]/upload → take photos → upload
-→ After event: browse gallery → download 20 free
-→ Want more → pay SGD 5.99 → download all as ZIP
+Primary:     Surat Red     #DC2626 (CTAs, brand, accent)
+Background:  Off-white     #FAFAF8 (page background)
+Surface:     White         #FFFFFF (cards)
+Warm BG:     Beige-50      #FDFCFA (auth pages)
+Text:        Neutral-900   #171717 (headings)
+Body:        Neutral-600   #525252 (body text)
+Muted:       Neutral-400   #A3A3A3 (helper text)
+Border:      Neutral-200   #E5E5E5 (card borders)
+Success:     Green         #16A34A
+Warning:     Yellow        #CA8A04
+Error:       Red           #DC2626
 ```
 
-### 8.3 Photographer: Upload & Earn
+### Typography
 ```
-Receive upload link from host/organizer
-→ Open on phone → enter name/email
-→ Select 200 photos from camera roll → upload
-→ Done (photos appear in guest gallery)
-→ Guests pay to unlock → photographer earns 60% per unlock
-→ (Optional) Create account to track earnings
+Headings:  Playfair Display (serif) — 2xl page titles, lg card titles
+Body:      Inter (sans-serif) — sm-base for all body copy
+Mono:      System monospace — code snippets only
+```
+
+### Component Patterns
+```
+.card       → white bg, rounded-xl, border neutral-200, shadow-card
+.card-hover → card + hover:shadow-card-hover transition
+.btn-primary → surat-red-500 bg, white text, rounded-lg, h-10/h-12
+.btn-secondary → white bg, neutral border, neutral text
+.btn-ghost  → transparent bg, neutral text, hover:bg
+.badge      → rounded-full, px-2.5 py-0.5, text-xs font-medium
+.input      → rounded-lg, border neutral-200, h-10, focus:ring-red
+.label      → text-sm font-medium neutral-700
+```
+
+### Responsive Strategy
+```
+Mobile (375px):   Single column, full-width cards, stacked layout
+Tablet (640px):   2-column grids, side padding increases
+Desktop (1024px): Max-width container (1200px), sidebar layout for dashboard
 ```
 
 ---
 
-## 9. Success Metrics
+## 11. User Flows
 
-### Primary (North Star)
+### Guest: Receive Link → Complete Interaction (2 minutes)
+```
+1. Get WhatsApp message with surat.app/[slug] link
+2. Tap → event microsite loads (< 2s)
+3. See cover image, event title, date/location
+4. Scroll to RSVP → fill name, email, "Attending", +1 → submit
+5. See confirmation + "Add to Wallet" / "Add to Calendar"
+6. Scroll down → see angpao section → send SGD 150
+7. See registry → "I'll get this" on Dyson V15
+8. Done in under 2 minutes, zero account creation
+```
+
+### Host: Create Event → Share (5 minutes)
+```
+1. Go to surat.app → "Create Event" → signup (if new)
+2. Choose plan: Standard (SGD 19) → pay
+3. Fill: title, type (wedding), date, location, maps link, description
+4. Upload cover image
+5. Toggle features: ☑ RSVP ☑ Angpao ☑ Registry ☑ Photos
+6. Submit → get link: surat.app/jason-sarah-wedding-k3f8
+7. Share via WhatsApp / email / print QR code
+8. Monitor dashboard: /host/events/jason-sarah-wedding-k3f8
+```
+
+---
+
+## 12. Roadmap
+
+### Phase 1 — MVP ✅ (Current State)
+- [x] Event microsite (`/[slug]`) — full functionality
+- [x] RSVP system (submit + host dashboard)
+- [x] Digital Angpao (send, view, thank)
+- [x] Gift Registry (add items, claim, activity feed)
+- [x] Photo Gallery (upload, thumbnails, paywall, ZIP download)
+- [x] Calendar .ics download
+- [x] Wallet pass generation (Apple + Google, with fallback)
+- [x] Auth: login + signup pages
+- [x] Role-based dashboards (host, organizer, photographer, admin)
+- [x] Custom Tailwind design system (Surat brand)
+- [x] Mobile-responsive layout throughout
+
+### Phase 2 — Polish & Real Payments (Next)
+- [ ] Stripe integration (event plan purchase, angpao payout, photo unlock)
+- [ ] Per-event plan enforcement (guest/photo limits)
+- [ ] Email notifications via Resend (RSVP confirmation, angpao receipt)
+- [ ] Landing page (surat.app/) with feature showcase
+- [ ] Password reset flow
+- [ ] Image optimization (WebP conversion, progressive loading)
+- [ ] SEO: meta tags, Open Graph for event pages
+
+### Phase 3 — Organizer & Photographer Monetization
+- [ ] Organizer workspace (multi-event dashboard)
+- [ ] Photographer earnings tracking + payout
+- [ ] Revenue share logic
+- [ ] Team invitations
+- [ ] White-label (custom logo, remove Surat branding)
+
+### Phase 4 — Growth
+- [ ] Referral program
+- [ ] Multi-language (EN, Bahasa Indonesia, Chinese)
+- [ ] Event templates (pre-filled for wedding, birthday, etc.)
+- [ ] Custom domains for organizers
+- [ ] Analytics dashboard (cross-event trends)
+
+---
+
+## 13. Success Metrics
+
+### North Star
 **Monthly Active Events** — events with ≥1 guest interaction in past 30 days
 
-### Secondary
-| Metric | Target (3 months) | Target (12 months) |
-|--------|-------------------|---------------------|
-| Events created | 200 | 2,000 |
-| Paid events (Standard/Premium) | 50 | 500 |
-| RSVPs submitted | 5,000 | 50,000 |
-| Photo unlocks | 100 | 2,000 |
-| Angpao processed (SGD) | 50,000 | 500,000 |
-| Revenue (net) | SGD 10,000 | SGD 150,000 |
+### Key Metrics (3-month targets)
+| Metric | Target |
+|--------|--------|
+| Events created | 200 |
+| Paid events | 50 |
+| RSVPs submitted | 5,000 |
+| Photo unlocks | 100 |
+| Angpao processed | SGD 50,000 |
+| Net revenue | SGD 10,000 |
 
-### Conversion Funnels
-- Landing → Sign up: 15%
-- Sign up → Create event: 60%
-- Free → Paid upgrade: 30%
-- Gallery viewer → Photo unlock: 8%
+### Conversion Targets
 - Event page visitor → RSVP: 65%
+- Gallery viewer → Photo unlock: 8%
+- Free → Paid upgrade: 30%
+- Signup → Create event: 60%
 
 ---
 
-## 10. Roadmap
+## 14. Competitive Positioning
 
-### Phase 1 — MVP ✅ (Done)
-- Event CRUD + RSVP
-- Digital Angpao (simulated payment)
-- Gift Registry
-- Photo Gallery with freemium paywall
-- Calendar + Wallet pass
-- Host dashboard
+**Surat = All-in-one event microsite for SEA**
 
-### Phase 2 — Auth & Real Payments (Next)
-- Login / signup pages
-- Stripe integration: event plan purchase, angpao payout, photo unlock
-- Per-event plan enforcement (limits on guests, photos)
-- Email notifications via Resend (RSVP confirmation, angpao receipt)
-- Password reset flow
+One shareable link replaces:
+- Google Forms (RSVP) — SGD 0
+- Canva Pro (invitations) — SGD 13/mo
+- Momento (photos) — SGD 8/event
+- GrabGifts (angpao) — 3-5% fee
+- RSVPify (guest management) — USD 19/mo
 
-### Phase 3 — Photographer & Revenue Share
-- Photographer accounts
-- Revenue share tracking and payout system
-- Photographer earnings dashboard
-- Host can assign photographer to event
-
-### Phase 4 — Organizer & Teams
-- Organizer subscription plan
-- Multi-event dashboard
-- Team workspace (invite members)
-- Create events on behalf of clients
-- White-label (custom domain, logo)
-
-### Phase 5 — Growth & Optimization
-- Landing page + SEO
-- Referral program (host invites host)
-- Multi-language (English, Bahasa Indonesia, Chinese)
-- Event templates (pre-filled for wedding, birthday, etc.)
-- AI: auto-generate event descriptions
-- Mobile app for photographers (React Native)
-
-### Phase 6 — Marketplace
-- Vendor directory (photographers, florists, caterers)
-- Sponsorship slots on event pages
-- Premium themes/templates for event pages
-- Dynamic photo pricing (based on event size)
+**Surat Standard at SGD 19 one-time replaces SGD 50+/month of separate tools.**
 
 ---
 
-## 11. Competitive Analysis
-
-| Competitor | What They Do | Surat Advantage |
-|-----------|-------------|-----------------|
-| Google Forms | RSVP only | No gifts, no photos, no wallet, ugly |
-| Zola / The Knot | Western wedding platform | No angpao, no IDR, not for SEA culture |
-| Momento | Photo sharing | No RSVP, no registry, standalone |
-| GrabGifts | Digital gifts | No event page, no RSVP, no photos |
-| WhatsApp Groups | Everything informal | Unstructured, no tracking, chaos |
-| Paperless Post | Digital invitations | Expensive, no angpao, no photo gallery |
-
-**Surat's positioning:** All-in-one for SEA. One link replaces SGD 50-80/month worth of separate tools for SGD 19 one-time.
-
----
-
-## 12. Risks & Mitigations
-
-| Risk | Impact | Mitigation |
-|------|--------|-----------|
-| Low paid conversion | Revenue below target | Strong free tier creates habit, upgrade prompts at limits |
-| Payment fraud (angpao) | Financial loss | Simulate first, add fraud detection with real payments |
-| Photo storage costs | High infrastructure cost | Compress aggressively, delete after 12 months, charge per event |
-| Competition from Zola entering SEA | Market share loss | Move fast, own angpao + IDR market, local partnerships |
-| Cultural mismatch | Wrong pricing/features | Test in SG first, expand to ID with localization |
-
----
-
-## 13. Glossary
+## 15. Glossary
 
 | Term | Definition |
 |------|-----------|
-| **Angpao** | Red packet / monetary gift given at events (Chinese tradition common in SEA) |
-| **Host** | The person whose event it is (the couple, birthday person) |
-| **Slug** | URL-friendly event identifier (e.g., `jason-sarah-wedding-k3f8`) |
-| **Unlock** | Guest pays to download full-resolution photos |
+| **Microsite** | A small, self-contained website for a specific event — accessed via a single URL |
+| **Angpao** | Red packet / monetary gift (Chinese tradition, common in SEA) |
+| **Host** | Person whose event it is (couple, birthday person) |
+| **Slug** | URL-friendly identifier (e.g., `jason-sarah-wedding-k3f8`) |
+| **Unlock** | Guest pays to access full-resolution photos |
 | **Wallet Pass** | Digital card saved to Apple Wallet or Google Wallet |
-| **White-label** | Removing Surat branding, using client's own domain/logo |
+| **White-label** | Removing Surat branding, using client's own identity |
+| **Claim** | Guest marks a registry item as "I'll get this" |

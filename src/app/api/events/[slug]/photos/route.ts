@@ -6,9 +6,7 @@ export async function GET(
   { params }: { params: { slug: string } }
 ) {
   try {
-    const event = await prisma.event.findUnique({
-      where: { slug: params.slug },
-    });
+    const event = await prisma.event.findUnique({ where: { slug: params.slug } });
 
     if (!event) {
       return NextResponse.json({ data: null, error: { message: "Event not found" } }, { status: 404 });
@@ -20,7 +18,10 @@ export async function GET(
       select: {
         id: true,
         thumbnailUrl: true,
-        uploaderRole: true,
+        originalUrl: true,
+        uploaderName: true,
+        isPhotographer: true,
+        downloadCount: true,
         createdAt: true,
       },
     });

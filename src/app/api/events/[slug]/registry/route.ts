@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { createSupabaseServerClient } from "@/lib/auth/supabase-server";
+import { createSupabaseServerClient } from "@/lib/auth";
 import { createRegistryItemSchema } from "@/types";
 
 export async function POST(
@@ -15,9 +15,7 @@ export async function POST(
       return NextResponse.json({ data: null, error: { message: "Unauthorized" } }, { status: 401 });
     }
 
-    const event = await prisma.event.findUnique({
-      where: { slug: params.slug },
-    });
+    const event = await prisma.event.findUnique({ where: { slug: params.slug } });
 
     if (!event) {
       return NextResponse.json({ data: null, error: { message: "Event not found" } }, { status: 404 });
@@ -37,7 +35,7 @@ export async function POST(
       );
     }
 
-    const { name, brand, price, url, imageUrl, priority } = parsed.data;
+    const { name, brand, price, productUrl, imageUrl, priority } = parsed.data;
 
     const item = await prisma.registryItem.create({
       data: {
@@ -45,7 +43,7 @@ export async function POST(
         name,
         brand: brand || null,
         price,
-        url: url || null,
+        productUrl: productUrl || null,
         imageUrl: imageUrl || null,
         priority,
       },
@@ -66,9 +64,7 @@ export async function GET(
   { params }: { params: { slug: string } }
 ) {
   try {
-    const event = await prisma.event.findUnique({
-      where: { slug: params.slug },
-    });
+    const event = await prisma.event.findUnique({ where: { slug: params.slug } });
 
     if (!event) {
       return NextResponse.json({ data: null, error: { message: "Event not found" } }, { status: 404 });
@@ -79,22 +75,21 @@ export async function GET(
       orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
     });
 
-    const maskedItems = items.map((item) => ({
+    const result = items.map((item) => ({
       id: item.id,
       name: item.name,
       brand: item.brand,
-      price: item.price,
-      url: item.url,
+      price: Number(item.price),
+      productUrl: item.productUrl,
       imageUrl: item.imageUrl,
       priority: item.priority,
-      isPurchased: item.purchasedByName !== null,
-      purchasedByName: item.isAnonymousPurchase
-        ? "Someone"
-        : item.purchasedByName,
+      status: item.status,
+      claimedBy: item.claimedAnonymous ? null : item.claimedBy,
+      claimedAnonymous: item.claimedAnonymous,
       createdAt: item.createdAt,
     }));
 
-    return NextResponse.json({ data: maskedItems, error: null });
+    return NextResponse.json({ data: result, error: null });
   } catch (error) {
     console.error("GET /api/events/[slug]/registry error:", error);
     return NextResponse.json(

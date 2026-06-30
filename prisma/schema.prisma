@@ -8,136 +8,109 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// ─── ENUMS ──────────────────────────────────────────────────────────────────────
-
-enum UserRole {
-  host
-  photographer
-  admin
-}
-
-enum EventType {
-  wedding
-  birthday
-  gathering
-  custom
-}
-
-enum RsvpStatus {
-  attending
-  not_attending
-  maybe
-  pending
-}
-
-enum UploaderRole {
-  photographer
-  guest
-}
-
-enum PassType {
-  apple
-  google
-}
-
-// ─── MODELS ─────────────────────────────────────────────────────────────────────
-
-model User {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+model Profile {
+  id        String   @id @db.Uuid
   email     String   @unique
-  name      String
-  role      UserRole
+  fullName  String?  @map("full_name")
+  avatarUrl String?  @map("avatar_url")
+  role      String   @default("host")
   createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  // Relations
-  events Event[] @relation("HostEvents")
-  photos Photo[]
+  events                  Event[]
+  organizerTeams          TeamMember[]
+  photographerAssignments PhotographerAssignment[]
 
-  @@map("users")
+  @@map("profiles")
 }
 
 model Event {
-  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  hostId          String    @map("host_id") @db.Uuid
-  title           String
-  type            EventType
-  date            DateTime
-  location        String
-  locationUrl     String?   @map("location_url")
-  description     String?
-  coverImageUrl   String?   @map("cover_image_url")
-  slug            String    @unique
-  featuresEnabled Json      @default("{}") @map("features_enabled") @db.JsonB
-  guestCapacity   Int?      @map("guest_capacity")
-  createdAt       DateTime  @default(now()) @map("created_at")
+  id             String    @id @default(uuid()) @db.Uuid
+  hostId         String    @map("host_id") @db.Uuid
+  slug           String    @unique
+  title          String
+  type           String    @default("wedding")
+  date           DateTime
+  time           String?
+  location       String?
+  mapsUrl        String?   @map("maps_url")
+  description    String?
+  coverImage     String?   @map("cover_image")
+  plan           String    @default("free")
+  guestLimit     Int       @default(50) @map("guest_limit")
+  photoLimit     Int       @default(50) @map("photo_limit")
+  enableRsvp     Boolean   @default(true) @map("enable_rsvp")
+  enableAngpao   Boolean   @default(true) @map("enable_angpao")
+  enableRegistry Boolean   @default(true) @map("enable_registry")
+  enablePhotos   Boolean   @default(true) @map("enable_photos")
+  status         String    @default("active")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
-  // Relations
-  host          User           @relation("HostEvents", fields: [hostId], references: [id], onDelete: Cascade)
-  guests        Guest[]
-  angpao        Angpao[]
-  registryItems RegistryItem[]
-  photos        Photo[]
-  photoUnlocks  PhotoUnlock[]
-  walletPasses  WalletPass[]
+  host                    Profile                  @relation(fields: [hostId], references: [id])
+  rsvps                   Rsvp[]
+  angpaos                 Angpao[]
+  registryItems           RegistryItem[]
+  photos                  Photo[]
+  photographerAssignments PhotographerAssignment[]
 
   @@index([hostId])
   @@index([slug])
   @@map("events")
 }
 
-model Guest {
-  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  eventId      String     @map("event_id") @db.Uuid
+model Rsvp {
+  id           String   @id @default(uuid()) @db.Uuid
+  eventId      String   @map("event_id") @db.Uuid
   name         String
   email        String
-  rsvpStatus   RsvpStatus @default(pending) @map("rsvp_status")
-  plusOnes     Json?      @db.JsonB @map("plus_ones")
-  dietaryNotes String?    @map("dietary_notes")
-  rsvpAt       DateTime?  @map("rsvp_at")
+  status       String   @default("attending")
+  plusOnes     Json?    @map("plus_ones")
+  dietaryNotes String?  @map("dietary_notes")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
-  // Relations
-  event        Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  walletPasses WalletPass[]
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, email])
   @@index([eventId])
-  @@map("guests")
+  @@map("rsvps")
 }
 
 model Angpao {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  eventId     String   @map("event_id") @db.Uuid
-  senderName  String   @map("sender_name")
-  senderEmail String   @map("sender_email")
-  amount      Decimal  @db.Decimal(12, 2)
-  currency    String   @default("SGD") @db.VarChar(3)
+  id          String  @id @default(uuid()) @db.Uuid
+  eventId     String  @map("event_id") @db.Uuid
+  senderName  String  @map("sender_name")
+  senderEmail String  @map("sender_email")
+  amount      Decimal @db.Decimal(12, 2)
+  currency    String  @default("SGD")
   message     String?
-  isAnonymous Boolean  @default(false) @map("is_anonymous")
-  isThanked   Boolean  @default(false) @map("is_thanked")
+  isAnonymous Boolean @default(false) @map("is_anonymous")
+  isThanked   Boolean @default(false) @map("is_thanked")
+  commission  Decimal @default(0) @db.Decimal(12, 2)
   createdAt   DateTime @default(now()) @map("created_at")
 
-  // Relations
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@index([eventId])
-  @@map("angpao")
+  @@map("angpaos")
 }
 
 model RegistryItem {
-  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  eventId             String   @map("event_id") @db.Uuid
-  name                String
-  brand               String?
-  price               Decimal  @db.Decimal(12, 2)
-  url                 String?
-  imageUrl            String?  @map("image_url")
-  priority            Int      @default(0)
-  purchasedByName     String?  @map("purchased_by_name")
-  purchasedByEmail    String?  @map("purchased_by_email")
-  isAnonymousPurchase Boolean  @default(false) @map("is_anonymous_purchase")
-  createdAt           DateTime @default(now()) @map("created_at")
+  id               String   @id @default(uuid()) @db.Uuid
+  eventId          String   @map("event_id") @db.Uuid
+  name             String
+  brand            String?
+  price            Decimal  @db.Decimal(12, 2)
+  productUrl       String?  @map("product_url")
+  imageUrl         String?  @map("image_url")
+  priority         Int      @default(5)
+  status           String   @default("available")
+  claimedBy        String?  @map("claimed_by")
+  claimedByEmail   String?  @map("claimed_by_email")
+  claimedAnonymous Boolean  @default(false) @map("claimed_anonymous")
+  createdAt        DateTime @default(now()) @map("created_at")
 
-  // Relations
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@index([eventId])
@@ -145,55 +118,72 @@ model RegistryItem {
 }
 
 model Photo {
-  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  eventId      String       @map("event_id") @db.Uuid
-  uploaderId   String       @map("uploader_id") @db.Uuid
-  uploaderRole UploaderRole @map("uploader_role")
-  fileUrl      String       @map("file_url")
-  thumbnailUrl String?      @map("thumbnail_url")
-  fileSize     Int?         @map("file_size")
-  resolution   String?
-  createdAt    DateTime     @default(now()) @map("created_at")
+  id             String   @id @default(uuid()) @db.Uuid
+  eventId        String   @map("event_id") @db.Uuid
+  uploaderName   String   @map("uploader_name")
+  uploaderEmail  String   @map("uploader_email")
+  isPhotographer Boolean  @default(false) @map("is_photographer")
+  originalUrl    String   @map("original_url")
+  thumbnailUrl   String   @map("thumbnail_url")
+  fileSize       Int      @default(0) @map("file_size")
+  downloadCount  Int      @default(0) @map("download_count")
+  createdAt      DateTime @default(now()) @map("created_at")
 
-  // Relations
-  event    Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  uploader User  @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@index([eventId])
-  @@index([uploaderId])
   @@map("photos")
 }
 
 model PhotoUnlock {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  eventId    String   @map("event_id") @db.Uuid
-  guestEmail String   @map("guest_email")
-  paidAt     DateTime @map("paid_at")
-  amount     Decimal  @db.Decimal(12, 2)
-  currency   String   @default("SGD") @db.VarChar(3)
+  id        String   @id @default(uuid()) @db.Uuid
+  eventId   String   @map("event_id") @db.Uuid
+  email     String
+  amount    Decimal  @db.Decimal(12, 2)
+  currency  String   @default("SGD")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  // Relations
-  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
-
-  @@unique([eventId, guestEmail])
   @@index([eventId])
   @@map("photo_unlocks")
 }
 
-model WalletPass {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  eventId   String   @map("event_id") @db.Uuid
-  guestId   String   @map("guest_id") @db.Uuid
-  passType  PassType @map("pass_type")
-  passData  Json     @map("pass_data") @db.JsonB
-  createdAt DateTime @default(now()) @map("created_at")
+model PhotographerAssignment {
+  id             String   @id @default(uuid()) @db.Uuid
+  eventId        String   @map("event_id") @db.Uuid
+  photographerId String   @map("photographer_id") @db.Uuid
+  revenueShare   Int      @default(60) @map("revenue_share")
+  createdAt      DateTime @default(now()) @map("created_at")
 
-  // Relations
-  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  guest Guest @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  event        Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  photographer Profile @relation(fields: [photographerId], references: [id])
 
-  @@unique([eventId, guestId, passType])
-  @@index([eventId])
-  @@index([guestId])
-  @@map("wallet_passes")
+  @@unique([eventId, photographerId])
+  @@map("photographer_assignments")
+}
+
+model TeamMember {
+  id          String   @id @default(uuid()) @db.Uuid
+  organizerId String   @map("organizer_id") @db.Uuid
+  memberId    String?  @map("member_id") @db.Uuid
+  email       String
+  role        String   @default("member")
+  status      String   @default("pending")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  organizer Profile @relation(fields: [organizerId], references: [id])
+
+  @@map("team_members")
+}
+
+model Transaction {
+  id          String   @id @default(uuid()) @db.Uuid
+  type        String
+  referenceId String   @map("reference_id") @db.Uuid
+  amount      Decimal  @db.Decimal(12, 2)
+  currency    String   @default("SGD")
+  status      String   @default("completed")
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("transactions")
 }

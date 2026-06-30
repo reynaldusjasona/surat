@@ -1,14 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createSupabaseServerClient } from "@/lib/auth";
-import { createGuestSchema, updateRsvpSchema } from "@/types";
-import { z } from "zod";
-
-const rsvpSubmitSchema = createGuestSchema.merge(
-  z.object({
-    rsvpStatus: updateRsvpSchema.shape.rsvpStatus,
-  })
-);
+import { createRsvpSchema } from "@/types";
 
 export async function POST(
   request: NextRequest,
@@ -17,14 +10,23 @@ export async function POST(
   try {
     const event = await prisma.event.findUnique({
       where: { slug: params.slug },
+      select: { id: true, enableRsvp: true, guestLimit: true, _count: { select: { rsvps: true } } },
     });
 
     if (!event) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
+    if (!event.enableRsvp) {
+      return NextResponse.json({ error: "RSVPs are disabled for this event" }, { status: 403 });
+    }
+
+    if (event._count.rsvps >= event.guestLimit) {
+      return NextResponse.json({ error: "This event is at capacity" }, { status: 409 });
+    }
+
     const body = await request.json();
-    const parsed = rsvpSubmitSchema.safeParse(body);
+    const parsed = createRsvpSchema.safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json(
@@ -33,36 +35,27 @@ export async function POST(
       );
     }
 
-    const { name, email, rsvpStatus, plusOnes, dietaryNotes } = parsed.data;
+    const { name, email, status, plusOnes, dietaryNotes } = parsed.data;
 
-    const plusOnesData = plusOnes && plusOnes.length > 0 ? plusOnes : undefined;
-
-    const guest = await prisma.guest.upsert({
-      where: {
-        eventId_email: {
-          eventId: event.id,
-          email,
-        },
-      },
+    const rsvp = await prisma.rsvp.upsert({
+      where: { eventId_email: { eventId: event.id, email } },
       update: {
         name,
-        rsvpStatus,
-        plusOnes: plusOnesData ?? { set: null },
+        status,
+        plusOnes: plusOnes && plusOnes.length > 0 ? (plusOnes as object[]) : undefined,
         dietaryNotes: dietaryNotes || null,
-        rsvpAt: new Date(),
       },
       create: {
         eventId: event.id,
         name,
         email,
-        rsvpStatus,
-        plusOnes: plusOnesData ?? undefined,
+        status,
+        plusOnes: plusOnes && plusOnes.length > 0 ? (plusOnes as object[]) : undefined,
         dietaryNotes: dietaryNotes || null,
-        rsvpAt: new Date(),
       },
     });
 
-    return NextResponse.json(guest, { status: 201 });
+    return NextResponse.json(rsvp, { status: 201 });
   } catch (error) {
     console.error("POST /api/events/[slug]/rsvp error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -81,9 +74,7 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const event = await prisma.event.findUnique({
-      where: { slug: params.slug },
-    });
+    const event = await prisma.event.findUnique({ where: { slug: params.slug } });
 
     if (!event) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
@@ -93,20 +84,19 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const guests = await prisma.guest.findMany({
+    const rsvps = await prisma.rsvp.findMany({
       where: { eventId: event.id },
-      orderBy: { rsvpAt: "desc" },
+      orderBy: { createdAt: "desc" },
     });
 
     const counts = {
-      attending: guests.filter((g) => g.rsvpStatus === "attending").length,
-      not_attending: guests.filter((g) => g.rsvpStatus === "not_attending").length,
-      maybe: guests.filter((g) => g.rsvpStatus === "maybe").length,
-      pending: guests.filter((g) => g.rsvpStatus === "pending").length,
-      total: guests.length,
+      attending: rsvps.filter((r) => r.status === "attending").length,
+      maybe: rsvps.filter((r) => r.status === "maybe").length,
+      not_attending: rsvps.filter((r) => r.status === "not_attending").length,
+      total: rsvps.length,
     };
 
-    return NextResponse.json({ guests, counts });
+    return NextResponse.json({ rsvps, counts });
   } catch (error) {
     console.error("GET /api/events/[slug]/rsvp error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

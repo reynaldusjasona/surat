@@ -10,30 +10,24 @@ export async function POST(
     const event = await prisma.event.findUnique({ where: { slug: params.slug } });
 
     if (!event) {
-      return NextResponse.json({ data: null, error: { message: "Event not found" } }, { status: 404 });
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
     const item = await prisma.registryItem.findUnique({ where: { id: params.id } });
 
     if (!item || item.eventId !== event.id) {
-      return NextResponse.json({ data: null, error: { message: "Item not found" } }, { status: 404 });
+      return NextResponse.json({ error: "Item not found" }, { status: 404 });
     }
 
     if (item.status === "claimed") {
-      return NextResponse.json(
-        { data: null, error: { message: "This item has already been claimed" } },
-        { status: 409 }
-      );
+      return NextResponse.json({ error: "Already claimed" }, { status: 409 });
     }
 
     const body = await request.json();
     const parsed = claimRegistryItemSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { data: null, error: { message: "Validation failed", details: parsed.error.flatten() } },
-        { status: 422 }
-      );
+      return NextResponse.json({ error: "Validation failed" }, { status: 422 });
     }
 
     const { claimedBy, claimedByEmail, claimedAnonymous } = parsed.data;
@@ -44,19 +38,12 @@ export async function POST(
     });
 
     return NextResponse.json({
-      data: {
-        id: updated.id,
-        name: updated.name,
-        status: updated.status,
-        claimedBy: updated.claimedAnonymous ? null : updated.claimedBy,
-      },
-      error: null,
+      id: updated.id,
+      status: updated.status,
+      claimedBy: updated.claimedAnonymous ? null : updated.claimedBy,
     });
   } catch (error) {
-    console.error("POST /api/events/[slug]/registry/[id]/purchase error:", error);
-    return NextResponse.json(
-      { data: null, error: { message: "Internal server error" } },
-      { status: 500 }
-    );
+    console.error("POST /api/events/[slug]/registry/[id]/claim error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

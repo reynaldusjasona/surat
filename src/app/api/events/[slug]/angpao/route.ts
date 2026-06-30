@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { createSupabaseServerClient } from "@/lib/auth/supabase-server";
+import { createSupabaseServerClient } from "@/lib/auth";
 import { createAngpaoSchema } from "@/types";
 
 export async function POST(
@@ -10,10 +10,15 @@ export async function POST(
   try {
     const event = await prisma.event.findUnique({
       where: { slug: params.slug },
+      select: { id: true, enableAngpao: true },
     });
 
     if (!event) {
-      return NextResponse.json({ data: null, error: { message: "Event not found" } }, { status: 404 });
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
+    }
+
+    if (!event.enableAngpao) {
+      return NextResponse.json({ error: "Angpao is disabled for this event" }, { status: 403 });
     }
 
     const body = await request.json();
@@ -21,15 +26,15 @@ export async function POST(
 
     if (!parsed.success) {
       return NextResponse.json(
-        { data: null, error: { message: "Validation failed", details: parsed.error.flatten() } },
+        { error: "Validation failed", details: parsed.error.flatten() },
         { status: 422 }
       );
     }
 
     const { senderName, senderEmail, amount, currency, message, isAnonymous } = parsed.data;
 
-    // Simulate payment — 1 second delay, always succeeds
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    // Simulate payment processing
+    await new Promise((resolve) => setTimeout(resolve, 800));
 
     const angpao = await prisma.angpao.create({
       data: {
@@ -40,7 +45,7 @@ export async function POST(
         currency,
         message: message || null,
         isAnonymous,
-        isThanked: false,
+        commission: Number(amount) * 0.029, // 2.9% platform fee
       },
     });
 
@@ -50,7 +55,6 @@ export async function POST(
           id: angpao.id,
           amount: angpao.amount,
           currency: angpao.currency,
-          message: angpao.message,
           createdAt: angpao.createdAt,
         },
         error: null,
@@ -78,9 +82,7 @@ export async function GET(
       return NextResponse.json({ data: null, error: { message: "Unauthorized" } }, { status: 401 });
     }
 
-    const event = await prisma.event.findUnique({
-      where: { slug: params.slug },
-    });
+    const event = await prisma.event.findUnique({ where: { slug: params.slug } });
 
     if (!event) {
       return NextResponse.json({ data: null, error: { message: "Event not found" } }, { status: 404 });
@@ -95,15 +97,13 @@ export async function GET(
       orderBy: { createdAt: "desc" },
     });
 
-    const totalAmount = angpaoList.reduce(
-      (sum, a) => sum + Number(a.amount),
-      0
-    );
+    const totalAmount = angpaoList.reduce((sum, a) => sum + Number(a.amount), 0);
 
+    // Strip sender email from all records (privacy)
     const maskedList = angpaoList.map((a) => ({
       id: a.id,
       senderName: a.isAnonymous ? "Anonymous" : a.senderName,
-      amount: a.amount,
+      amount: Number(a.amount),
       currency: a.currency,
       message: a.message,
       isAnonymous: a.isAnonymous,
@@ -112,11 +112,7 @@ export async function GET(
     }));
 
     return NextResponse.json({
-      data: {
-        totalAmount,
-        count: angpaoList.length,
-        angpao: maskedList,
-      },
+      data: { totalAmount, count: angpaoList.length, angpao: maskedList },
       error: null,
     });
   } catch (error) {
