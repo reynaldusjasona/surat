@@ -83,7 +83,7 @@ export default function EventDashboardPage() {
       <div className="card p-12 text-center">
         <AlertCircle size={32} className="text-surat-neutral-400 mx-auto mb-3" />
         <h2 className="font-serif text-xl text-surat-neutral-700">Event not found</h2>
-        <Link href="/host" className="btn-primary mt-4 inline-flex">Back to events</Link>
+        <Link href="/organizer" className="btn-primary mt-4 inline-flex">Back to events</Link>
       </div>
     );
   }

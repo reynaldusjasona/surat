@@ -80,7 +80,7 @@ export default function SignupPage() {
       }
 
       toast.success("Account created! Welcome to Surat.");
-      router.push(`/dashboard/${role}`);
+      router.push(`/${role}`);
       router.refresh();
     } catch {
       toast.error("Something went wrong. Please try again.");

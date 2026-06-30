@@ -17,31 +17,31 @@ function getNavItems(role: string): NavItem[] {
   switch (role) {
     case "organizer":
       return [
-        { label: "All Events", href: "/dashboard/organizer", icon: <LayoutDashboard size={18} /> },
-        { label: "Create Event", href: "/dashboard/organizer/events/new", icon: <CalendarPlus size={18} /> },
-        { label: "Team", href: "/dashboard/organizer/team", icon: <Users size={18} /> },
-        { label: "Analytics", href: "/dashboard/organizer/analytics", icon: <BarChart3 size={18} /> },
-        { label: "Settings", href: "/dashboard/organizer/settings", icon: <Settings size={18} /> },
+        { label: "All Events", href: "/organizer", icon: <LayoutDashboard size={18} /> },
+        { label: "Create Event", href: "/organizer/events/new", icon: <CalendarPlus size={18} /> },
+        { label: "Team", href: "/organizer/team", icon: <Users size={18} /> },
+        { label: "Analytics", href: "/organizer/analytics", icon: <BarChart3 size={18} /> },
+        { label: "Settings", href: "/organizer/settings", icon: <Settings size={18} /> },
       ];
     case "photographer":
       return [
-        { label: "My Events", href: "/dashboard/photographer", icon: <Camera size={18} /> },
-        { label: "Earnings", href: "/dashboard/photographer/earnings", icon: <DollarSign size={18} /> },
-        { label: "Settings", href: "/dashboard/photographer/settings", icon: <Settings size={18} /> },
+        { label: "My Events", href: "/photographer", icon: <Camera size={18} /> },
+        { label: "Earnings", href: "/photographer/earnings", icon: <DollarSign size={18} /> },
+        { label: "Settings", href: "/photographer/settings", icon: <Settings size={18} /> },
       ];
     case "admin":
       return [
-        { label: "Overview", href: "/dashboard/admin", icon: <LayoutDashboard size={18} /> },
-        { label: "Users", href: "/dashboard/admin/users", icon: <Users size={18} /> },
-        { label: "Events", href: "/dashboard/admin/events", icon: <FileText size={18} /> },
-        { label: "Analytics", href: "/dashboard/admin/analytics", icon: <BarChart3 size={18} /> },
-        { label: "Settings", href: "/dashboard/admin/settings", icon: <ShieldCheck size={18} /> },
+        { label: "Overview", href: "/admin", icon: <LayoutDashboard size={18} /> },
+        { label: "Users", href: "/admin/users", icon: <Users size={18} /> },
+        { label: "Events", href: "/admin/events", icon: <FileText size={18} /> },
+        { label: "Analytics", href: "/admin/analytics", icon: <BarChart3 size={18} /> },
+        { label: "Settings", href: "/admin/settings", icon: <ShieldCheck size={18} /> },
       ];
     default:
       return [
-        { label: "My Events", href: "/dashboard/host", icon: <LayoutDashboard size={18} /> },
-        { label: "Create Event", href: "/dashboard/host/events/new", icon: <CalendarPlus size={18} /> },
-        { label: "Settings", href: "/dashboard/host/settings", icon: <Settings size={18} /> },
+        { label: "My Events", href: "/host", icon: <LayoutDashboard size={18} /> },
+        { label: "Create Event", href: "/host/events/new", icon: <CalendarPlus size={18} /> },
+        { label: "Settings", href: "/host/settings", icon: <Settings size={18} /> },
       ];
   }
 }
@@ -66,7 +66,7 @@ export function Topbar({ role, fullName }: TopbarProps) {
   }
 
   const isActive = (href: string) => {
-    if (href === `/dashboard/${role}`) return pathname === href;
+    if (href === `/${role}`) return pathname === href;
     return pathname.startsWith(href);
   };
 

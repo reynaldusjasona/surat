@@ -56,7 +56,7 @@ export default function CreateEventPage() {
       }
 
       const { slug } = await response.json();
-      router.push(`/dashboard/${slug}`);
+      router.push(`/host/events/${slug}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {

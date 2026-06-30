@@ -54,7 +54,7 @@ export default async function HostDashboardPage() {
           <h1 className="page-title">My Events</h1>
           <p className="page-subtitle">Manage and share your events</p>
         </div>
-        <Link href="/dashboard/host/events/new" className="btn-primary self-start sm:self-auto">
+        <Link href="/host/events/new" className="btn-primary self-start sm:self-auto">
           <CalendarPlus size={16} />
           Create Event
         </Link>
@@ -70,7 +70,7 @@ export default async function HostDashboardPage() {
           <p className="text-sm text-surat-neutral-500 mb-6 max-w-xs mx-auto">
             Create your first event to start collecting RSVPs, angpao, and more.
           </p>
-          <Link href="/dashboard/host/events/new" className="btn-primary inline-flex">
+          <Link href="/host/events/new" className="btn-primary inline-flex">
             <CalendarPlus size={16} />
             Create your first event
           </Link>
@@ -159,7 +159,7 @@ function EventCard({
 
       <div className="flex items-center gap-2 mt-auto pt-3 border-t border-surat-neutral-100">
         <Link
-          href={`/dashboard/host/events/${event.slug}`}
+          href={`/host/events/${event.slug}`}
           className="btn-secondary text-xs flex-1 justify-center py-2"
         >
           Manage
