@@ -97,6 +97,23 @@ export default function CreateEventPage() {
       }
 
       const { slug } = await res.json();
+
+      // If paid plan, redirect to Stripe checkout
+      if (form.plan !== "free") {
+        const stripeRes = await fetch("/api/stripe/checkout-event", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ plan: form.plan, eventTitle: form.title, slug }),
+        });
+        const stripeData = await stripeRes.json();
+        if (stripeRes.ok && stripeData.url) {
+          window.location.href = stripeData.url;
+          return;
+        }
+        // If Stripe fails, still navigate to event (plan upgrade can happen later)
+        toast.error("Payment setup failed — you can upgrade later from the dashboard.");
+      }
+
       toast.success("Event created!");
       router.push(`/host/events/${slug}`);
     } catch {

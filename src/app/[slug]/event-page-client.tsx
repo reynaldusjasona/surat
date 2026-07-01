@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   MapPin, Calendar, Clock, ChevronDown, ChevronUp, Loader2,
-  Heart, Gift, Camera, CalendarCheck, Check, X, Download,
+  Heart, Gift, Camera, CalendarCheck, Check, X, Download, Lock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -296,6 +297,7 @@ function RsvpSection({ slug, onSuccess }: { slug: string; onSuccess: (name: stri
 
 /* ─── Angpao Section ─────────────────────────────────────────────── */
 function AngpaoSection({ slug }: { slug: string }) {
+  const searchParams = useSearchParams();
   const [amount, setAmount] = useState<number | "">("");
   const [currency, setCurrency] = useState("SGD");
   const [name, setName] = useState("");
@@ -303,24 +305,25 @@ function AngpaoSection({ slug }: { slug: string }) {
   const [message, setMessage] = useState("");
   const [isAnon, setIsAnon] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
+  const [done, setDone] = useState(searchParams.get("angpao") === "success");
 
   const quickAmounts = currency === "SGD" ? [20, 50, 100, 200] : [100000, 200000, 500000, 1000000];
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!amount) { toast.error("Please enter an amount"); return; }
+    if (!name || !email) { toast.error("Please enter your name and email"); return; }
     setLoading(true);
     try {
-      const res = await fetch(`/api/events/${slug}/angpao`, {
+      const res = await fetch(`/api/stripe/checkout-angpao`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ senderName: name, senderEmail: email, amount, currency, message, isAnonymous: isAnon }),
+        body: JSON.stringify({ slug, senderName: name, senderEmail: email, amount, currency, message, isAnonymous: isAnon }),
       });
-      if (!res.ok) { toast.error("Failed to send angpao"); return; }
-      setDone(true);
-    } catch { toast.error("Something went wrong."); }
-    finally { setLoading(false); }
+      const data = await res.json();
+      if (!res.ok || !data.url) { toast.error(data.error || "Failed to create payment"); setLoading(false); return; }
+      window.location.href = data.url;
+    } catch { toast.error("Something went wrong."); setLoading(false); }
   }
 
   if (done) {
@@ -513,10 +516,18 @@ function RegistrySection({ slug }: { slug: string }) {
 interface PublicPhoto { id: string; thumbnailUrl: string; originalUrl: string; isPhotographer: boolean; }
 
 function PhotoSection({ slug }: { slug: string }) {
+  const searchParams = useSearchParams();
   const [photos, setPhotos] = useState<PublicPhoto[] | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [lightbox, setLightbox] = useState<PublicPhoto | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [unlocked, setUnlocked] = useState(searchParams.get("unlock") === "success");
+  const [downloadCount, setDownloadCount] = useState(0);
+  const [unlockEmail, setUnlockEmail] = useState(searchParams.get("email") || "");
+  const [showUnlockForm, setShowUnlockForm] = useState(false);
+  const [unlocking, setUnlocking] = useState(false);
+
+  const FREE_DOWNLOADS = 20;
 
   async function load() {
     if (photos !== null) { setExpanded(!expanded); return; }
@@ -527,6 +538,12 @@ function PhotoSection({ slug }: { slug: string }) {
   }
 
   async function download(photo: PublicPhoto) {
+    // Check if free downloads exceeded and not unlocked
+    if (!unlocked && downloadCount >= FREE_DOWNLOADS) {
+      setShowUnlockForm(true);
+      toast.error(`Free limit reached (${FREE_DOWNLOADS} downloads). Unlock the full gallery to continue.`);
+      return;
+    }
     setDownloading(true);
     try {
       const res = await fetch(photo.originalUrl);
@@ -534,8 +551,25 @@ function PhotoSection({ slug }: { slug: string }) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a"); a.href = url; a.download = `photo-${photo.id}.jpg`; a.click();
       URL.revokeObjectURL(url);
+      setDownloadCount((c) => c + 1);
     } catch { toast.error("Download failed"); }
     setDownloading(false);
+  }
+
+  async function handleUnlock(e: React.FormEvent) {
+    e.preventDefault();
+    if (!unlockEmail) { toast.error("Please enter your email"); return; }
+    setUnlocking(true);
+    try {
+      const res = await fetch("/api/stripe/checkout-photo-unlock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug, email: unlockEmail, currency: "sgd" }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.url) { toast.error(data.error || "Failed to start checkout"); setUnlocking(false); return; }
+      window.location.href = data.url;
+    } catch { toast.error("Something went wrong"); setUnlocking(false); }
   }
 
   return (
@@ -561,11 +595,39 @@ function PhotoSection({ slug }: { slug: string }) {
           )
         )}
 
-        <div className="mt-4 text-center">
-          <a href={`/${slug}/upload`}
-            className="text-sm text-surat-red-500 hover:text-surat-red-600 font-medium">
-            Upload your photos →
-          </a>
+        <div className="mt-4 space-y-3">
+          {!unlocked && (
+            <div className="rounded-xl border border-surat-neutral-200 bg-surat-beige-50 p-4 text-center">
+              <Lock size={16} className="inline text-surat-neutral-400 mb-1" />
+              <p className="text-sm text-surat-neutral-600 font-medium">
+                {downloadCount}/{FREE_DOWNLOADS} free downloads used
+              </p>
+              {showUnlockForm || downloadCount >= FREE_DOWNLOADS ? (
+                <form onSubmit={handleUnlock} className="mt-3 flex flex-col gap-2">
+                  <input type="email" className="input text-sm" placeholder="Your email" value={unlockEmail} onChange={(e) => setUnlockEmail(e.target.value)} required />
+                  <button type="submit" className="btn-primary w-full text-sm" disabled={unlocking}>
+                    {unlocking ? <Loader2 size={14} className="animate-spin" /> : <Lock size={14} />}
+                    Unlock all photos — SGD 5.99
+                  </button>
+                </form>
+              ) : (
+                <button onClick={() => setShowUnlockForm(true)} className="text-xs text-surat-red-500 hover:underline mt-1">
+                  Want unlimited? Unlock full gallery →
+                </button>
+              )}
+            </div>
+          )}
+          {unlocked && (
+            <div className="rounded-xl border border-green-200 bg-green-50 p-3 text-center">
+              <p className="text-sm text-green-700 font-medium">✓ Gallery unlocked — download freely!</p>
+            </div>
+          )}
+          <div className="text-center">
+            <a href={`/${slug}/upload`}
+              className="text-sm text-surat-red-500 hover:text-surat-red-600 font-medium">
+              Upload your photos →
+            </a>
+          </div>
         </div>
       </SectionCard>
 
