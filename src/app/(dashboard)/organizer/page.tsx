@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/auth";
+import { getDevUser } from "@/lib/auth/dev-user";
 import { prisma } from "@/lib/db";
 import { CalendarPlus, MapPin, Calendar, ExternalLink, Users, TrendingUp, DollarSign, Camera, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,18 +25,38 @@ function formatDate(date: Date) {
 }
 
 export default async function OrganizerDashboardPage() {
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  // Dev bypass
+  let userId: string;
+  const devAuth = await getDevUser();
+  if (devAuth) {
+    userId = devAuth.user.id;
+  } else {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) redirect("/login");
+    userId = user.id;
+  }
 
-  if (!user) redirect("/login");
+  let events: Awaited<ReturnType<typeof prisma.event.findMany>> = [];
+  let revenue = 0;
+  try {
+    events = await prisma.event.findMany({
+      where: { hostId: userId },
+      include: {
+        _count: { select: { rsvps: true, photos: true, angpaos: true } },
+      },
+      orderBy: { date: "asc" },
+    });
 
-  const events = await prisma.event.findMany({
-    where: { hostId: user.id },
-    include: {
-      _count: { select: { rsvps: true, photos: true, angpaos: true } },
-    },
-    orderBy: { date: "asc" },
-  });
+    const angpaoRevenue = await prisma.angpao.aggregate({
+      where: { event: { hostId: userId } },
+      _sum: { amount: true },
+    });
+    revenue = Number(angpaoRevenue._sum.amount ?? 0);
+  } catch (e) {
+    // DB unavailable — render with empty data
+    console.error("[OrganizerDashboard] DB error:", (e as Error).message);
+  }
 
   const upcoming = events.filter((e) => new Date(e.date) >= new Date() && e.status !== "removed");
   const past = events.filter((e) => new Date(e.date) < new Date() && e.status !== "removed");
@@ -44,13 +65,6 @@ export default async function OrganizerDashboardPage() {
   const totalGuests = events.reduce((sum, e) => sum + e._count.rsvps, 0);
   const totalPhotos = events.reduce((sum, e) => sum + e._count.photos, 0);
   const totalAngpaos = events.reduce((sum, e) => sum + e._count.angpaos, 0);
-
-  // Get angpao revenue
-  const angpaoRevenue = await prisma.angpao.aggregate({
-    where: { event: { hostId: user.id } },
-    _sum: { amount: true },
-  });
-  const revenue = Number(angpaoRevenue._sum.amount ?? 0);
 
   return (
     <div className="space-y-8">
