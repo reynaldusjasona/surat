@@ -37,13 +37,26 @@ export default async function OrganizerDashboardPage() {
     userId = user.id;
   }
 
-  const events = await prisma.event.findMany({
-    where: { hostId: userId },
-    include: {
-      _count: { select: { rsvps: true, photos: true, angpaos: true } },
-    },
-    orderBy: { date: "asc" },
-  });
+  let events: Awaited<ReturnType<typeof prisma.event.findMany>> = [];
+  let revenue = 0;
+  try {
+    events = await prisma.event.findMany({
+      where: { hostId: userId },
+      include: {
+        _count: { select: { rsvps: true, photos: true, angpaos: true } },
+      },
+      orderBy: { date: "asc" },
+    });
+
+    const angpaoRevenue = await prisma.angpao.aggregate({
+      where: { event: { hostId: userId } },
+      _sum: { amount: true },
+    });
+    revenue = Number(angpaoRevenue._sum.amount ?? 0);
+  } catch (e) {
+    // DB unavailable — render with empty data
+    console.error("[OrganizerDashboard] DB error:", (e as Error).message);
+  }
 
   const upcoming = events.filter((e) => new Date(e.date) >= new Date() && e.status !== "removed");
   const past = events.filter((e) => new Date(e.date) < new Date() && e.status !== "removed");
@@ -52,13 +65,6 @@ export default async function OrganizerDashboardPage() {
   const totalGuests = events.reduce((sum, e) => sum + e._count.rsvps, 0);
   const totalPhotos = events.reduce((sum, e) => sum + e._count.photos, 0);
   const totalAngpaos = events.reduce((sum, e) => sum + e._count.angpaos, 0);
-
-  // Get angpao revenue
-  const angpaoRevenue = await prisma.angpao.aggregate({
-    where: { event: { hostId: userId } },
-    _sum: { amount: true },
-  });
-  const revenue = Number(angpaoRevenue._sum.amount ?? 0);
 
   return (
     <div className="space-y-8">

@@ -41,13 +41,19 @@ export default async function HostDashboardPage() {
     userId = user.id;
   }
 
-  const events = await prisma.event.findMany({
-    where: { hostId: userId },
-    include: {
-      _count: { select: { rsvps: true, photos: true } },
-    },
-    orderBy: { date: "asc" },
-  });
+  let events: Awaited<ReturnType<typeof prisma.event.findMany>> = [];
+  try {
+    events = await prisma.event.findMany({
+      where: { hostId: userId },
+      include: {
+        _count: { select: { rsvps: true, photos: true } },
+      },
+      orderBy: { date: "asc" },
+    });
+  } catch (e) {
+    // DB unavailable — render with empty data
+    console.error("[HostDashboard] DB error:", (e as Error).message);
+  }
 
   const upcoming = events.filter((e) => new Date(e.date) >= new Date() && e.status !== "removed");
   const past = events.filter((e) => new Date(e.date) < new Date() && e.status !== "removed");

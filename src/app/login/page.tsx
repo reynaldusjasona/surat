@@ -126,23 +126,7 @@ function LoginForm() {
               </Link>
             </div>
 
-            {/* Dev bypass buttons */}
-            {process.env.NODE_ENV !== "production" && (
-              <div className="mt-6 pt-6 border-t border-surat-neutral-100">
-                <p className="text-xs text-surat-neutral-400 mb-3 text-center">Dev Login (no Supabase)</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {(["host", "organizer", "photographer", "admin"] as const).map((role) => (
-                    <a
-                      key={role}
-                      href={`/api/dev-login?role=${role}`}
-                      className="btn-secondary text-xs py-2 justify-center capitalize"
-                    >
-                      {role}
-                    </a>
-                  ))}
-                </div>
-              </div>
-            )}
+
           </div>
 
           {/* Footer note */}
