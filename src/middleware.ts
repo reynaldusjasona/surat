@@ -8,9 +8,9 @@ const ROLE_DASHBOARDS: Record<string, string> = {
   admin: "/admin",
 };
 
-const DASHBOARD_PATHS = ["/host", "/organizer", "/photographer", "/admin"];
+const DASHBOARD_PATHS = ["/host", "/organizer", "/photographer", "/admin", "/dashboard"];
 
-const PUBLIC_PATHS = ["/", "/login", "/signup", "/create"];
+const PUBLIC_PATHS = ["/", "/login", "/signup", "/create", "/forgot-password", "/reset-password", "/dashboard"];
 
 function isPublicPath(pathname: string) {
   if (PUBLIC_PATHS.includes(pathname)) return true;
