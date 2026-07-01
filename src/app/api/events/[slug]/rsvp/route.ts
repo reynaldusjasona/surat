@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createSupabaseServerClient } from "@/lib/auth";
 import { createRsvpSchema } from "@/types";
+import { sendRsvpConfirmation, sendNewRsvpNotification } from "@/lib/email/send";
 
 export async function POST(
   request: NextRequest,
@@ -54,6 +55,42 @@ export async function POST(
         dietaryNotes: dietaryNotes || null,
       },
     });
+
+    // Send emails (non-blocking)
+    const fullEvent = await prisma.event.findUnique({
+      where: { id: event.id },
+      include: { host: { select: { fullName: true, email: true } }, _count: { select: { rsvps: true } } },
+    });
+
+    if (fullEvent) {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+      // Email to guest
+      sendRsvpConfirmation({
+        guestName: name,
+        guestEmail: email,
+        eventTitle: fullEvent.title,
+        eventDate: fullEvent.date.toLocaleDateString("en-SG", { day: "numeric", month: "long", year: "numeric" }),
+        eventLocation: fullEvent.location || "TBA",
+        eventUrl: `${baseUrl}/${params.slug}`,
+        status,
+      });
+
+      // Email to host
+      if (fullEvent.host.email) {
+        sendNewRsvpNotification({
+          hostName: fullEvent.host.fullName || "Host",
+          hostEmail: fullEvent.host.email,
+          guestName: name,
+          guestEmail: email,
+          eventTitle: fullEvent.title,
+          status,
+          plusOnes: plusOnes?.length || 0,
+          dashboardUrl: `${baseUrl}/host/events/${params.slug}`,
+          totalRsvps: fullEvent._count.rsvps,
+        });
+      }
+    }
 
     return NextResponse.json(rsvp, { status: 201 });
   } catch (error) {

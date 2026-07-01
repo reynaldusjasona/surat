@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createSupabaseServerClient } from "@/lib/auth";
 import { createAngpaoSchema } from "@/types";
+import { sendAngpaoNotification } from "@/lib/email/send";
 
 export async function POST(
   request: NextRequest,
@@ -48,6 +49,27 @@ export async function POST(
         commission: Number(amount) * 0.029, // 2.9% platform fee
       },
     });
+
+    // Notify host (non-blocking)
+    const fullEvent = await prisma.event.findUnique({
+      where: { id: event.id },
+      include: { host: { select: { fullName: true, email: true } } },
+    });
+
+    if (fullEvent?.host.email) {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      sendAngpaoNotification({
+        hostName: fullEvent.host.fullName || "Host",
+        hostEmail: fullEvent.host.email,
+        eventTitle: fullEvent.title,
+        amount: Number(amount).toLocaleString("en-SG"),
+        currency,
+        senderName,
+        message: message || null,
+        isAnonymous,
+        dashboardUrl: `${baseUrl}/host/events/${params.slug}`,
+      });
+    }
 
     return NextResponse.json(
       {
