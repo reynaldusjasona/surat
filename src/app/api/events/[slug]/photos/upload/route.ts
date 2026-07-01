@@ -13,7 +13,7 @@ export async function POST(
   try {
     const event = await prisma.event.findUnique({
       where: { slug: params.slug },
-      select: { id: true, enablePhotos: true },
+      select: { id: true, enablePhotos: true, photoLimit: true, _count: { select: { photos: true } } },
     });
 
     if (!event) {
@@ -22,6 +22,10 @@ export async function POST(
 
     if (!event.enablePhotos) {
       return NextResponse.json({ error: "Photo uploads disabled" }, { status: 403 });
+    }
+
+    if (event._count.photos >= event.photoLimit) {
+      return NextResponse.json({ error: `Photo limit reached (${event.photoLimit}). Upgrade your plan for more.` }, { status: 409 });
     }
 
     const formData = await request.formData();
