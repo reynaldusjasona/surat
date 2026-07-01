@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/auth";
+import { getDevUser } from "@/lib/auth/dev-user";
 import { prisma } from "@/lib/db";
 import { CalendarPlus, MapPin, Calendar, ExternalLink, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -28,20 +29,31 @@ function formatDate(date: Date) {
 }
 
 export default async function HostDashboardPage() {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Dev bypass
+  let userId: string;
+  const devAuth = await getDevUser();
+  if (devAuth) {
+    userId = devAuth.user.id;
+  } else {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) redirect("/login");
+    userId = user.id;
+  }
 
-  if (!user) redirect("/login");
-
-  const events = await prisma.event.findMany({
-    where: { hostId: user.id },
-    include: {
-      _count: { select: { rsvps: true, photos: true } },
-    },
-    orderBy: { date: "asc" },
-  });
+  let events: Awaited<ReturnType<typeof prisma.event.findMany>> = [];
+  try {
+    events = await prisma.event.findMany({
+      where: { hostId: userId },
+      include: {
+        _count: { select: { rsvps: true, photos: true } },
+      },
+      orderBy: { date: "asc" },
+    });
+  } catch (e) {
+    // DB unavailable — render with empty data
+    console.error("[HostDashboard] DB error:", (e as Error).message);
+  }
 
   const upcoming = events.filter((e) => new Date(e.date) >= new Date() && e.status !== "removed");
   const past = events.filter((e) => new Date(e.date) < new Date() && e.status !== "removed");
