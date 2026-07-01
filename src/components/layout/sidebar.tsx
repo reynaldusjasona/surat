@@ -69,8 +69,15 @@ export function Sidebar({ role, fullName, email }: SidebarProps) {
   const navItems = getNavItems(role);
 
   async function handleSignOut() {
-    const supabase = createSupabaseBrowserClient();
-    await supabase.auth.signOut();
+    // Clear dev bypass cookie
+    document.cookie = "dev-bypass-role=; path=/; max-age=0";
+    // Try Supabase sign out (may fail if Supabase is down)
+    try {
+      const supabase = createSupabaseBrowserClient();
+      await supabase.auth.signOut();
+    } catch {
+      // ignore — dev mode without Supabase
+    }
     router.push("/login");
     router.refresh();
   }

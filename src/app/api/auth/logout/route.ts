@@ -5,10 +5,17 @@ export async function POST() {
   try {
     const supabase = await createSupabaseServerClient();
     await supabase.auth.signOut();
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("POST /api/auth/logout error:", error);
-    return NextResponse.json({ error: "Failed to sign out" }, { status: 500 });
+  } catch {
+    // Supabase may be unreachable in dev
   }
+
+  const response = NextResponse.json({ success: true });
+  response.cookies.set("dev-bypass-role", "", { path: "/", maxAge: 0 });
+  return response;
+}
+
+export async function GET(request: Request) {
+  const response = NextResponse.redirect(new URL("/login", request.url));
+  response.cookies.set("dev-bypass-role", "", { path: "/", maxAge: 0 });
+  return response;
 }
