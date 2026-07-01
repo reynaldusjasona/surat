@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/auth";
+import { getDevUser } from "@/lib/auth/dev-user";
 import { prisma } from "@/lib/db";
 import { CalendarPlus, MapPin, Calendar, ExternalLink, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -28,15 +29,20 @@ function formatDate(date: Date) {
 }
 
 export default async function HostDashboardPage() {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
+  // Dev bypass
+  let userId: string;
+  const devAuth = await getDevUser();
+  if (devAuth) {
+    userId = devAuth.user.id;
+  } else {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) redirect("/login");
+    userId = user.id;
+  }
 
   const events = await prisma.event.findMany({
-    where: { hostId: user.id },
+    where: { hostId: userId },
     include: {
       _count: { select: { rsvps: true, photos: true } },
     },

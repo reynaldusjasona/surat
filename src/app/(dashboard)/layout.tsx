@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/auth";
+import { getDevUser } from "@/lib/auth/dev-user";
 import { prisma } from "@/lib/db";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
@@ -9,6 +10,26 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // ─── DEV BYPASS ─────────────────────────────────────────────────────────
+  const devAuth = await getDevUser();
+  if (devAuth) {
+    const { profile } = devAuth;
+    return (
+      <div className="flex h-screen overflow-hidden bg-surat-offwhite">
+        <Sidebar role={profile.role} fullName={profile.fullName} email={profile.email} />
+        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+          <Topbar role={profile.role} fullName={profile.fullName} />
+          <main className="flex-1 overflow-y-auto">
+            <div className="max-w-dashboard mx-auto px-4 sm:px-6 py-6">
+              {children}
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+  // ─── END DEV BYPASS ─────────────────────────────────────────────────────
+
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },

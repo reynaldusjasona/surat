@@ -25,6 +25,38 @@ function isDashboardPath(pathname: string) {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // ─── DEV AUTH BYPASS ───────────────────────────────────────────────────
+  // When not in production and dev-bypass-role cookie is set, skip Supabase entirely
+  const devRole = request.cookies.get("dev-bypass-role")?.value;
+  if (process.env.NODE_ENV !== "production" && devRole) {
+    const validRoles = ["host", "organizer", "photographer", "admin"];
+    if (validRoles.includes(devRole)) {
+      // Redirect logged-in dev users away from login/signup
+      if (pathname === "/login" || pathname === "/signup") {
+        return NextResponse.redirect(new URL(ROLE_DASHBOARDS[devRole] ?? "/host", request.url));
+      }
+
+      // Allow public paths
+      if (isPublicPath(pathname)) {
+        return NextResponse.next({ request });
+      }
+
+      // Dashboard access — just verify role matches
+      if (isDashboardPath(pathname)) {
+        const firstSegment = "/" + pathname.split("/")[1];
+        const targetRole = firstSegment.replace("/", "");
+        if (DASHBOARD_PATHS.includes(firstSegment) && targetRole !== devRole && validRoles.includes(targetRole)) {
+          return NextResponse.redirect(new URL(ROLE_DASHBOARDS[devRole] ?? "/host", request.url));
+        }
+        return NextResponse.next({ request });
+      }
+
+      // Everything else — allow
+      return NextResponse.next({ request });
+    }
+  }
+  // ─── END DEV BYPASS ────────────────────────────────────────────────────
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
