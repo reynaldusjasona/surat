@@ -271,7 +271,7 @@ export default function Hero() {
             <Link href="/signup" className="inline-flex items-center gap-2.5 px-7 py-4 rounded-[13px] text-base font-bold bg-[#F8EFE0] text-[#8E2017] hover:bg-white transition-colors shadow-xl">
               Create your event <ArrowRight size={18} />
             </Link>
-            <a href="#" className="px-6 py-4 rounded-[13px] text-base font-semibold text-[#F8EFE0] border border-[rgba(248,239,224,0.5)] hover:bg-white/10 transition-colors">
+            <a href="#features" className="px-6 py-4 rounded-[13px] text-base font-semibold text-[#F8EFE0] border border-[rgba(248,239,224,0.5)] hover:bg-white/10 transition-colors">
               See a live example
             </a>
           </div>

@@ -187,23 +187,23 @@ export default function LandingPage() {
             <div className="flex flex-col gap-2.5 text-sm">
               <a href="#occasions" className="hover:text-white transition-colors">Occasions</a>
               <a href="#features" className="hover:text-white transition-colors">Features</a>
-              <a href="#" className="hover:text-white transition-colors">Pricing</a>
-              <a href="#" className="hover:text-white transition-colors">For organizers</a>
+              <a href="/signup" className="hover:text-white transition-colors">Pricing</a>
+              <a href="/signup" className="hover:text-white transition-colors">For organizers</a>
             </div>
           </div>
           <div>
             <p className="text-[13px] font-bold text-[#F8EFE0] mb-3.5">Company</p>
             <div className="flex flex-col gap-2.5 text-sm">
-              <a href="#" className="hover:text-white transition-colors">About</a>
-              <a href="#" className="hover:text-white transition-colors">Blog</a>
-              <a href="#" className="hover:text-white transition-colors">Careers</a>
+              <a href="#how" className="hover:text-white transition-colors">About</a>
+              <a href="#how" className="hover:text-white transition-colors">Blog</a>
+              <a href="#how" className="hover:text-white transition-colors">Careers</a>
             </div>
           </div>
           <div>
             <p className="text-[13px] font-bold text-[#F8EFE0] mb-3.5">Support</p>
             <div className="flex flex-col gap-2.5 text-sm">
-              <a href="#" className="hover:text-white transition-colors">Help centre</a>
-              <a href="#" className="hover:text-white transition-colors">Contact</a>
+              <a href="mailto:hello@surat.app" className="hover:text-white transition-colors">Help centre</a>
+              <a href="mailto:hello@surat.app" className="hover:text-white transition-colors">Contact</a>
               <a href="#" className="hover:text-white transition-colors">Privacy (PDPA)</a>
             </div>
           </div>
