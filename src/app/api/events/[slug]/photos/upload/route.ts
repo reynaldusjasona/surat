@@ -2,14 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createClient } from "@supabase/supabase-js";
 import sharp from "sharp";
+import { rateLimit } from "@/lib/rate-limit";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const THUMB_WIDTH = 400;
+const limiter = rateLimit({ interval: 60_000, limit: 20 }); // 20 uploads per minute per IP
 
 export async function POST(
   request: NextRequest,
   { params }: { params: { slug: string } }
 ) {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const { success } = limiter.check(ip);
+  if (!success) {
+    return NextResponse.json({ error: "Too many uploads. Please wait a moment." }, { status: 429 });
+  }
+
   try {
     const event = await prisma.event.findUnique({
       where: { slug: params.slug },

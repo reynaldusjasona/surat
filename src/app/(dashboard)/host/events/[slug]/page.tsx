@@ -530,9 +530,20 @@ function PhotosTab({ slug }: { slug: string }) {
           <p className="text-sm font-medium text-surat-neutral-800">Photographer upload link</p>
           <p className="text-xs text-surat-neutral-400 mt-0.5 truncate">{photographerLink}</p>
         </div>
-        <button onClick={copyPhotographerLink} className="btn-secondary text-xs self-start sm:self-auto">
-          <Copy size={14} /> Copy Link
-        </button>
+        <div className="flex gap-2 self-start sm:self-auto">
+          <button onClick={copyPhotographerLink} className="btn-secondary text-xs">
+            <Copy size={14} /> Copy Link
+          </button>
+          {photos.length > 0 && (
+            <a
+              href={`/api/events/${slug}/photos/download-all?email=host@surat.local`}
+              className="btn-secondary text-xs"
+              title="Download all photos as ZIP"
+            >
+              <Download size={14} /> Download All
+            </a>
+          )}
+        </div>
       </div>
 
       {photos.length === 0 ? (

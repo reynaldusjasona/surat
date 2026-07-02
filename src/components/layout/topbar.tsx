@@ -58,8 +58,13 @@ export function Topbar({ role, fullName }: TopbarProps) {
   const navItems = getNavItems(role);
 
   async function handleSignOut() {
-    const supabase = createSupabaseBrowserClient();
-    await supabase.auth.signOut();
+    document.cookie = "dev-bypass-role=; path=/; max-age=0";
+    try {
+      const supabase = createSupabaseBrowserClient();
+      await supabase.auth.signOut();
+    } catch {
+      // ignore — dev mode without Supabase
+    }
     setOpen(false);
     router.push("/login");
     router.refresh();

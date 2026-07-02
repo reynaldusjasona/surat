@@ -3,12 +3,21 @@ import { prisma } from "@/lib/db";
 import { createSupabaseServerClient } from "@/lib/auth";
 import { createRsvpSchema } from "@/types";
 import { sendRsvpConfirmation, sendNewRsvpNotification } from "@/lib/email/send";
+import { rateLimit } from "@/lib/rate-limit";
+
+const limiter = rateLimit({ interval: 60_000, limit: 10 }); // 10 RSVPs per minute per IP
 
 export async function POST(
   request: NextRequest,
   { params }: { params: { slug: string } }
 ) {
   try {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const { success } = limiter.check(ip);
+    if (!success) {
+      return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
+    }
+
     const event = await prisma.event.findUnique({
       where: { slug: params.slug },
       select: { id: true, enableRsvp: true, guestLimit: true, _count: { select: { rsvps: true } } },

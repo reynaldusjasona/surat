@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe, ANGPAO_COMMISSION } from "@/lib/stripe/server";
 import { prisma } from "@/lib/db";
+import { rateLimit } from "@/lib/rate-limit";
+
+const limiter = rateLimit({ interval: 60_000, limit: 5 }); // 5 angpao checkouts per minute per IP
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const { success } = limiter.check(ip);
+    if (!success) {
+      return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
+    }
+
     const { slug, senderName, senderEmail, amount, currency = "SGD", message, isAnonymous } = await request.json();
 
     if (!slug || !senderName || !senderEmail || !amount) {
