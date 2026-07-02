@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   MapPin, Calendar, Clock, ChevronDown, ChevronUp, Loader2,
@@ -659,13 +659,48 @@ function PhotoSection({ slug }: { slug: string }) {
 
 /* ─── Calendar Button ────────────────────────────────────────────── */
 function CalendarDownloadButton({ slug }: { slug: string }) {
+  const [walletOptions, setWalletOptions] = useState<
+    { type: string; label: string; url: string; available: boolean }[] | null
+  >(null);
+
+  useEffect(() => {
+    fetch(`/api/events/${slug}/wallet`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.options) setWalletOptions(data.options);
+      })
+      .catch(() => {
+        // Fallback — just show basic calendar link
+      });
+  }, [slug]);
+
   return (
-    <div className="card p-4 flex flex-col sm:flex-row gap-2">
-      <a href={`/api/events/${slug}/calendar`} download
-        className="btn-secondary flex-1 justify-center text-sm">
-        📅 Add to Calendar (.ics)
-      </a>
-      <p className="text-xs text-surat-neutral-400 self-center sm:text-left text-center hidden sm:block">
+    <div className="card p-4 space-y-2">
+      <div className="flex flex-col sm:flex-row gap-2">
+        {walletOptions ? (
+          walletOptions.map((opt) => (
+            <a
+              key={opt.type}
+              href={opt.url}
+              target={opt.url.startsWith("http") ? "_blank" : undefined}
+              rel={opt.url.startsWith("http") ? "noopener noreferrer" : undefined}
+              download={opt.type === "apple_calendar" ? true : undefined}
+              className="btn-secondary flex-1 justify-center text-sm"
+            >
+              {opt.type.includes("google") ? "🟢" : "🍎"} {opt.label}
+            </a>
+          ))
+        ) : (
+          <a
+            href={`/api/events/${slug}/calendar`}
+            download
+            className="btn-secondary flex-1 justify-center text-sm"
+          >
+            📅 Add to Calendar (.ics)
+          </a>
+        )}
+      </div>
+      <p className="text-xs text-surat-neutral-400 text-center">
         Apple · Google · Outlook
       </p>
     </div>

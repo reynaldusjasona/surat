@@ -38,11 +38,14 @@ export default function CreateEventPage() {
           type: formData.type,
           date: new Date(formData.date).toISOString(),
           location: formData.location,
-          locationUrl: formData.locationUrl || undefined,
+          mapsUrl: formData.locationUrl || undefined,
           description: formData.description || undefined,
-          coverImageUrl: formData.coverImageUrl || undefined,
-          guestCapacity: formData.guestCapacity ? parseInt(formData.guestCapacity) : undefined,
-          featuresEnabled: formData.featuresEnabled,
+          coverImage: formData.coverImageUrl || undefined,
+          guestLimit: formData.guestCapacity ? parseInt(formData.guestCapacity) : undefined,
+          enableAngpao: formData.featuresEnabled.angpao ?? true,
+          enableRegistry: formData.featuresEnabled.registry ?? true,
+          enablePhotos: formData.featuresEnabled.photos ?? true,
+          enableRsvp: true,
         }),
       });
 
