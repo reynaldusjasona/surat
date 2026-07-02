@@ -1,95 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createSupabaseServerClient } from "@/lib/auth";
-import { createAngpaoSchema } from "@/types";
-import { sendAngpaoNotification } from "@/lib/email/send";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: { slug: string } }
 ) {
-  try {
-    const event = await prisma.event.findUnique({
-      where: { slug: params.slug },
-      select: { id: true, enableAngpao: true },
-    });
-
-    if (!event) {
-      return NextResponse.json({ error: "Event not found" }, { status: 404 });
-    }
-
-    if (!event.enableAngpao) {
-      return NextResponse.json({ error: "Angpao is disabled for this event" }, { status: 403 });
-    }
-
-    const body = await request.json();
-    const parsed = createAngpaoSchema.safeParse(body);
-
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: "Validation failed", details: parsed.error.flatten() },
-        { status: 422 }
-      );
-    }
-
-    const { senderName, senderEmail, amount, currency, message, isAnonymous } = parsed.data;
-
-    // Simulate payment processing
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
-    const angpao = await prisma.angpao.create({
-      data: {
-        eventId: event.id,
-        senderName,
-        senderEmail,
-        amount,
-        currency,
-        message: message || null,
-        isAnonymous,
-        commission: Number(amount) * 0.029, // 2.9% platform fee
-      },
-    });
-
-    // Notify host (non-blocking)
-    const fullEvent = await prisma.event.findUnique({
-      where: { id: event.id },
-      include: { host: { select: { fullName: true, email: true } } },
-    });
-
-    if (fullEvent?.host.email) {
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-      sendAngpaoNotification({
-        hostName: fullEvent.host.fullName || "Host",
-        hostEmail: fullEvent.host.email,
-        eventTitle: fullEvent.title,
-        amount: Number(amount).toLocaleString("en-SG"),
-        currency,
-        senderName,
-        message: message || null,
-        isAnonymous,
-        dashboardUrl: `${baseUrl}/host/events/${params.slug}`,
-      });
-    }
-
-    return NextResponse.json(
-      {
-        data: {
-          id: angpao.id,
-          amount: angpao.amount,
-          currency: angpao.currency,
-          createdAt: angpao.createdAt,
-        },
-        error: null,
-      },
-      { status: 201 }
-    );
-  } catch (error) {
-    console.error("POST /api/events/[slug]/angpao error:", error);
-    return NextResponse.json(
-      { data: null, error: { message: "Internal server error" } },
-      { status: 500 }
-    );
-  }
+  // Direct angpao recording is disabled — all angpao payments must go through Stripe.
+  // Use POST /api/stripe/checkout-angpao to initiate an angpao payment.
+  // The webhook handler (POST /api/stripe/webhook) records the angpao after payment succeeds.
+  return NextResponse.json(
+    {
+      error: "Direct angpao submission is not allowed. Use the Stripe checkout flow.",
+      redirect: "/api/stripe/checkout-angpao",
+    },
+    { status: 403 }
+  );
 }
 
 export async function GET(
