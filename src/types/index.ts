@@ -1,32 +1,17 @@
 import { z } from "zod";
 
-export const userRoles = ["host", "organizer", "photographer", "admin"] as const;
-export const eventTypes = ["wedding", "birthday", "gathering", "custom"] as const;
-export const rsvpStatuses = ["attending", "maybe", "not_attending"] as const;
-export const eventPlans = ["free", "standard", "premium"] as const;
+// ─── Event ────────────────────────────────────────────────────────────────────
 
-export type UserRole = (typeof userRoles)[number];
-export type EventType = (typeof eventTypes)[number];
-export type RsvpStatus = (typeof rsvpStatuses)[number];
-
-// Profile
-export const createProfileSchema = z.object({
-  email: z.string().email(),
-  fullName: z.string().min(1).max(255),
-  role: z.enum(userRoles).default("host"),
-});
-
-// Event
 export const createEventSchema = z.object({
-  title: z.string().min(1).max(255),
-  type: z.enum(eventTypes),
-  date: z.string(),
+  title: z.string().min(1, "Title is required").max(200),
+  type: z.enum(["wedding", "birthday", "gathering", "custom"]).default("wedding"),
+  date: z.string().min(1, "Date is required"), // ISO date string
   time: z.string().optional(),
-  location: z.string().min(1),
+  location: z.string().min(1, "Location is required").max(500),
   mapsUrl: z.string().url().optional().or(z.literal("")),
-  description: z.string().optional(),
+  description: z.string().max(2000).optional(),
   coverImage: z.string().url().optional().or(z.literal("")),
-  plan: z.enum(eventPlans).default("free"),
+  plan: z.enum(["free", "standard", "premium"]).default("free"),
   enableRsvp: z.boolean().default(true),
   enableAngpao: z.boolean().default(true),
   enableRegistry: z.boolean().default(true),
@@ -36,72 +21,54 @@ export const createEventSchema = z.object({
 
 export type CreateEventInput = z.infer<typeof createEventSchema>;
 
-// RSVP
+// ─── RSVP ─────────────────────────────────────────────────────────────────────
+
 export const createRsvpSchema = z.object({
-  name: z.string().min(1).max(255),
-  email: z.string().email(),
-  status: z.enum(rsvpStatuses),
-  plusOnes: z.array(z.object({ name: z.string().min(1) })).optional(),
+  name: z.string().min(1, "Name is required").max(100),
+  email: z.string().email("Valid email is required"),
+  status: z.enum(["attending", "maybe", "not_attending"]).default("attending"),
+  plusOnes: z
+    .array(
+      z.object({
+        name: z.string().min(1).max(100),
+      })
+    )
+    .optional(),
   dietaryNotes: z.string().max(500).optional(),
 });
 
 export type CreateRsvpInput = z.infer<typeof createRsvpSchema>;
 
-// Angpao
+// ─── Angpao ───────────────────────────────────────────────────────────────────
+
 export const createAngpaoSchema = z.object({
-  senderName: z.string().min(1).max(255),
-  senderEmail: z.string().email(),
-  amount: z.number().positive(),
-  currency: z.string().length(3).default("SGD"),
+  senderName: z.string().min(1, "Name is required").max(100),
+  senderEmail: z.string().email("Valid email is required"),
+  amount: z.number().positive("Amount must be positive"),
+  currency: z.enum(["SGD", "IDR", "MYR", "USD"]).default("SGD"),
   message: z.string().max(500).optional(),
   isAnonymous: z.boolean().default(false),
 });
 
 export type CreateAngpaoInput = z.infer<typeof createAngpaoSchema>;
 
-// Registry
+// ─── Registry ─────────────────────────────────────────────────────────────────
+
 export const createRegistryItemSchema = z.object({
-  name: z.string().min(1).max(255),
-  brand: z.string().optional(),
-  price: z.number().positive(),
+  name: z.string().min(1, "Item name is required").max(200),
+  brand: z.string().max(100).optional(),
+  price: z.number().positive("Price must be positive"),
   productUrl: z.string().url().optional().or(z.literal("")),
   imageUrl: z.string().url().optional().or(z.literal("")),
   priority: z.number().int().min(1).max(10).default(5),
 });
 
+export type CreateRegistryItemInput = z.infer<typeof createRegistryItemSchema>;
+
 export const claimRegistryItemSchema = z.object({
-  claimedBy: z.string().min(1).max(255),
-  claimedByEmail: z.string().email(),
+  claimedBy: z.string().min(1, "Name is required").max(100),
+  claimedByEmail: z.string().email("Valid email is required"),
   claimedAnonymous: z.boolean().default(false),
 });
 
-export type CreateRegistryItemInput = z.infer<typeof createRegistryItemSchema>;
 export type ClaimRegistryItemInput = z.infer<typeof claimRegistryItemSchema>;
-
-// Photo upload
-export const uploadPhotoSchema = z.object({
-  uploaderName: z.string().min(1).max(255),
-  uploaderEmail: z.string().email(),
-  isPhotographer: z.boolean().default(false),
-  originalUrl: z.string().url(),
-  thumbnailUrl: z.string().url(),
-  fileSize: z.number().int().positive().optional(),
-});
-
-export type UploadPhotoInput = z.infer<typeof uploadPhotoSchema>;
-
-// Auth
-export const signupSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-  fullName: z.string().min(1).max(255),
-  role: z.enum(["host", "organizer", "photographer"]),
-});
-
-export const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
-});
-
-export type SignupInput = z.infer<typeof signupSchema>;
-export type LoginInput = z.infer<typeof loginSchema>;
